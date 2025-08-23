@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { File, Save, FolderPlus, Trash2 } from 'lucide-react';
+import { File, Save, FolderPlus, Trash2, Edit2, Check, X } from 'lucide-react';
 
 const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
   const [workflows, setWorkflows] = useState([]);
   const [newWorkflowName, setNewWorkflowName] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   // 컴포넌트 마운트 시 저장된 워크플로우 불러오기
   useEffect(() => {
@@ -80,9 +82,59 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     }
   };
 
+  const handleStartEdit = (workflow) => {
+    setEditingId(workflow.id);
+    setEditingName(workflow.name);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const handleSaveEdit = (workflowId) => {
+    if (!editingName.trim()) {
+      alert('워크플로우 이름을 입력해주세요.');
+      return;
+    }
+
+    const updatedWorkflows = workflows.map(w => 
+      w.id === workflowId 
+        ? { ...w, name: editingName.trim(), updatedAt: new Date().toISOString() }
+        : w
+    );
+    
+    saveWorkflowsList(updatedWorkflows);
+    
+    // 워크플로우 데이터도 업데이트
+    try {
+      const workflowData = localStorage.getItem(`workflow_${workflowId}`);
+      if (workflowData) {
+        const parsed = JSON.parse(workflowData);
+        parsed.name = editingName.trim();
+        parsed.updatedAt = new Date().toISOString();
+        localStorage.setItem(`workflow_${workflowId}`, JSON.stringify(parsed));
+      }
+    } catch (error) {
+      console.error('워크플로우 데이터 업데이트 실패:', error);
+    }
+    
+    setEditingId(null);
+    setEditingName('');
+    alert(`워크플로우 이름이 '${editingName.trim()}'으로 변경되었습니다.`);
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSave();
+    }
+  };
+
+  const handleEditKeyPress = (e, workflowId) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit(workflowId);
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
     }
   };
 
@@ -127,24 +179,69 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
         ) : (
           workflows.map((workflow) => (
             <div key={workflow.id} className="workflow-item">
-              <div 
-                className="workflow-info"
-                onClick={() => handleLoad(workflow)}
-                title={`'${workflow.name}' 불러오기`}
-              >
-                <File size={14} />
-                <span className="workflow-name">{workflow.name}</span>
-              </div>
-              <button
-                className="delete-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(workflow.id, workflow.name);
-                }}
-                title="삭제"
-              >
-                <Trash2 size={12} />
-              </button>
+              {editingId === workflow.id ? (
+                // 편집 모드
+                <div className="workflow-edit-mode">
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyPress={(e) => handleEditKeyPress(e, workflow.id)}
+                    className="workflow-edit-input"
+                    autoFocus
+                  />
+                  <div className="edit-buttons">
+                    <button
+                      className="save-edit-btn"
+                      onClick={() => handleSaveEdit(workflow.id)}
+                      title="저장"
+                    >
+                      <Check size={12} />
+                    </button>
+                    <button
+                      className="cancel-edit-btn"
+                      onClick={handleCancelEdit}
+                      title="취소"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // 일반 모드
+                <>
+                  <div 
+                    className="workflow-info"
+                    onClick={() => handleLoad(workflow)}
+                    title={`'${workflow.name}' 불러오기`}
+                  >
+                    <File size={14} />
+                    <span className="workflow-name">{workflow.name}</span>
+                  </div>
+                  <div className="workflow-actions">
+                    <button
+                      className="edit-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(workflow);
+                      }}
+                      title="이름 수정"
+                    >
+                      <Edit2 size={12} />
+                    </button>
+                    <button
+                      className="delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(workflow.id, workflow.name);
+                      }}
+                      title="삭제"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))
         )}
@@ -250,16 +347,93 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
           cursor: pointer;
           color: #6b7280;
           transition: all 0.2s;
-          opacity: 0;
         }
 
-        .workflow-item:hover .delete-btn {
+        .workflow-item:hover .workflow-actions {
           opacity: 1;
         }
 
         .delete-btn:hover {
           background: #fee2e2;
           color: #dc2626;
+        }
+
+        .workflow-actions {
+          display: flex;
+          gap: 4px;
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+
+        .edit-btn {
+          background: none;
+          border: none;
+          padding: 4px;
+          border-radius: 4px;
+          cursor: pointer;
+          color: #6b7280;
+          transition: all 0.2s;
+        }
+
+        .edit-btn:hover {
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+
+        .workflow-edit-mode {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+        }
+
+        .workflow-edit-input {
+          flex: 1;
+          padding: 6px 8px;
+          border: 1px solid #3b82f6;
+          border-radius: 4px;
+          font-size: 14px;
+          outline: none;
+          background: white;
+        }
+
+        .edit-buttons {
+          display: flex;
+          gap: 4px;
+        }
+
+        .save-edit-btn {
+          background: #10b981;
+          color: white;
+          border: none;
+          padding: 4px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .save-edit-btn:hover {
+          background: #059669;
+        }
+
+        .cancel-edit-btn {
+          background: #6b7280;
+          color: white;
+          border: none;
+          padding: 4px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .cancel-edit-btn:hover {
+          background: #4b5563;
         }
       `}</style>
     </div>
