@@ -33,16 +33,6 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     }
   };
 
-  const saveWorkflowsList = (updatedWorkflows) => {
-    try {
-      localStorage.setItem('arch_flow_workflows', JSON.stringify(updatedWorkflows));
-      setWorkflows(updatedWorkflows);
-    } catch (error) {
-      console.error('워크플로우 목록 저장 실패:', error);
-      alert('워크플로우 저장에 실패했습니다.');
-    }
-  };
-
   const handleSave = async () => {
     if (!newWorkflowName.trim()) {
       alert('워크플로우 이름을 입력해주세요.');

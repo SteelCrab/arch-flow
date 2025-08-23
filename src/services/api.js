@@ -1,7 +1,5 @@
 // API 서비스 - 백엔드와 통신
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'http://98.81.108.10:3001/api'
-  : 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://98.81.108.10:3001/api';
 
 class ApiService {
   // 워크플로우 목록 조회
@@ -193,4 +191,5 @@ class ApiService {
   }
 }
 
-export default new ApiService();
+const apiService = new ApiService();
+export default apiService;
