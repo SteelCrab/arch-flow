@@ -1,26 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { File, Save, FolderPlus, Trash2, Edit2, Check, X } from 'lucide-react';
+import ApiService from '../services/api';
 
 const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
   const [workflows, setWorkflows] = useState([]);
   const [newWorkflowName, setNewWorkflowName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   // 컴포넌트 마운트 시 저장된 워크플로우 불러오기
   useEffect(() => {
-    loadSavedWorkflows();
+    loadWorkflows();
+    checkBackendConnection();
   }, []);
 
-  const loadSavedWorkflows = () => {
+  const checkBackendConnection = async () => {
+    const connected = await ApiService.checkBackendHealth();
+    setBackendConnected(connected);
+  };
+
+  const loadWorkflows = async () => {
+    setIsLoading(true);
     try {
-      const savedWorkflows = localStorage.getItem('arch_flow_workflows');
-      if (savedWorkflows) {
-        const parsed = JSON.parse(savedWorkflows);
-        setWorkflows(parsed);
-      }
+      const workflowList = await ApiService.getWorkflows();
+      setWorkflows(workflowList);
     } catch (error) {
-      console.error('워크플로우 불러오기 실패:', error);
+      console.error('워크플로우 목록 로드 실패:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -34,51 +43,67 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newWorkflowName.trim()) {
       alert('워크플로우 이름을 입력해주세요.');
       return;
     }
 
     const newWorkflow = {
-      id: Date.now(),
+      id: `workflow_${Date.now()}`,
       name: newWorkflowName.trim(),
       type: 'file',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    const updatedWorkflows = [...workflows, newWorkflow];
-    saveWorkflowsList(updatedWorkflows);
-    setNewWorkflowName('');
-    
-    // 부모 컴포넌트에 저장 요청
-    if (onSaveWorkflow) {
-      onSaveWorkflow(newWorkflow);
-    }
-
-    // alert(`워크플로우 '${newWorkflow.name}'이 저장되었습니다.`);
-  };
-
-  const handleLoad = (workflow) => {
-    if (onLoadWorkflow) {
-      onLoadWorkflow(workflow);
-    }
-  };
-
-  const handleDelete = (workflowId, workflowName) => {
-    if (window.confirm(`'${workflowName}' 워크플로우를 삭제하시겠습니까?`)) {
-      const updatedWorkflows = workflows.filter(w => w.id !== workflowId);
-      saveWorkflowsList(updatedWorkflows);
+    try {
+      setIsLoading(true);
+      await ApiService.saveWorkflow(newWorkflow);
       
-      // 로컬 스토리지에서 워크플로우 데이터도 삭제
-      try {
-        localStorage.removeItem(`workflow_${workflowId}`);
-      } catch (error) {
-        console.error('워크플로우 데이터 삭제 실패:', error);
+      if (onSaveWorkflow) {
+        onSaveWorkflow(newWorkflow);
       }
       
-      alert(`워크플로우 '${workflowName}'이 삭제되었습니다.`);
+      setNewWorkflowName('');
+      await loadWorkflows(); // 목록 새로고침
+    } catch (error) {
+      console.error('워크플로우 저장 실패:', error);
+      alert('워크플로우 저장에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoad = async (workflow) => {
+    try {
+      setIsLoading(true);
+      const workflowData = await ApiService.getWorkflow(workflow.id);
+      
+      if (workflowData && onLoadWorkflow) {
+        onLoadWorkflow(workflowData);
+      }
+    } catch (error) {
+      console.error('워크플로우 불러오기 실패:', error);
+      alert('워크플로우를 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (workflowId, workflowName) => {
+    if (window.confirm(`'${workflowName}' 워크플로우를 삭제하시겠습니까?`)) {
+      try {
+        setIsLoading(true);
+        await ApiService.deleteWorkflow(workflowId);
+        await loadWorkflows(); // 목록 새로고침
+        alert(`워크플로우 '${workflowName}'이 삭제되었습니다.`);
+      } catch (error) {
+        console.error('워크플로우 삭제 실패:', error);
+        alert('워크플로우 삭제에 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -92,36 +117,30 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     setEditingName('');
   };
 
-  const handleSaveEdit = (workflowId) => {
+  const handleSaveEdit = async (workflowId) => {
     if (!editingName.trim()) {
       alert('워크플로우 이름을 입력해주세요.');
       return;
     }
 
-    const updatedWorkflows = workflows.map(w => 
-      w.id === workflowId 
-        ? { ...w, name: editingName.trim(), updatedAt: new Date().toISOString() }
-        : w
-    );
-    
-    saveWorkflowsList(updatedWorkflows);
-    
-    // 워크플로우 데이터도 업데이트
     try {
-      const workflowData = localStorage.getItem(`workflow_${workflowId}`);
-      if (workflowData) {
-        const parsed = JSON.parse(workflowData);
-        parsed.name = editingName.trim();
-        parsed.updatedAt = new Date().toISOString();
-        localStorage.setItem(`workflow_${workflowId}`, JSON.stringify(parsed));
-      }
+      setIsLoading(true);
+      const updatedWorkflow = {
+        name: editingName.trim(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      await ApiService.updateWorkflow(workflowId, updatedWorkflow);
+      
+      setEditingId(null);
+      setEditingName('');
+      await loadWorkflows(); // 목록 새로고침
     } catch (error) {
-      console.error('워크플로우 데이터 업데이트 실패:', error);
+      console.error('워크플로우 수정 실패:', error);
+      alert('워크플로우 이름 수정에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setEditingId(null);
-    setEditingName('');
-    // alert(`워크플로우 이름이 '${editingName.trim()}'으로 변경되었습니다.`);
   };
 
   const handleKeyPress = (e) => {
@@ -141,7 +160,17 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
   return (
     <div className="workflow-sidebar">
       <div className="workflow-header">
-        <h4>나의 워크플로우</h4>
+        <div className="header-title">
+          <h4>나의 워크플로우</h4>
+          <div className="connection-status">
+            <div className={`status-indicator ${backendConnected ? 'connected' : 'disconnected'}`}>
+              <span className="status-dot"></span>
+              <span className="status-text">
+                {backendConnected ? 'API' : '로컬'}
+              </span>
+            </div>
+          </div>
+        </div>
         <button className="new-folder-btn" title="새 폴더">
           <FolderPlus size={14} />
         </button>
@@ -171,7 +200,11 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
 
       {/* 저장된 워크플로우 목록 */}
       <div className="workflow-list">
-        {workflows.length === 0 ? (
+        {isLoading ? (
+          <div className="loading-state">
+            <span>로딩 중...</span>
+          </div>
+        ) : workflows.length === 0 ? (
           <div className="empty-state">
             <p>저장된 워크플로우가 없습니다.</p>
             <p>위에서 워크플로우를 저장해보세요!</p>
@@ -434,6 +467,57 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
 
         .cancel-edit-btn:hover {
           background: #4b5563;
+        }
+
+        .header-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex: 1;
+        }
+
+        .connection-status {
+          margin-left: 8px;
+        }
+
+        .status-indicator {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 10px;
+          padding: 2px 6px;
+          border-radius: 12px;
+          background: #f3f4f6;
+        }
+
+        .status-indicator.connected {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .status-indicator.disconnected {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: currentColor;
+        }
+
+        .status-text {
+          font-weight: 500;
+        }
+
+        .loading-state {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 20px;
+          color: #6b7280;
+          font-size: 14px;
         }
       `}</style>
     </div>

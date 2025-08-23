@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 
 import InputBlock from './blocks/InputBlock';
 import AIAgentBlock from './blocks/AIAgentBlock';
+import ApiService from '../services/api';
 import NotionBlock from './blocks/NotionBlock';
 import ConditionBlock from './blocks/ConditionBlock';
 import ScheduleBlock from './blocks/ScheduleBlock';
@@ -44,7 +45,7 @@ const WorkflowCanvasInner = () => {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
   // 자동 저장 함수
-  const autoSaveWorkflow = useCallback(() => {
+  const autoSaveWorkflow = useCallback(async () => {
     if (!autoSaveEnabled || nodes.length === 0) return;
 
     const workflowId = currentWorkflowId || `auto_${Date.now()}`;
@@ -57,38 +58,51 @@ const WorkflowCanvasInner = () => {
     };
 
     try {
-      // 현재 워크플로우 저장
-      localStorage.setItem(`workflow_${workflowId}`, JSON.stringify(workflowData));
-      
-      // 워크플로우 목록 업데이트
-      const savedWorkflows = JSON.parse(localStorage.getItem('arch_flow_workflows') || '[]');
-      const existingIndex = savedWorkflows.findIndex(w => w.id === workflowId);
-      
-      if (existingIndex >= 0) {
-        savedWorkflows[existingIndex] = {
-          ...savedWorkflows[existingIndex],
-          name: workflowData.name,
-          updatedAt: workflowData.updatedAt
-        };
+      if (currentWorkflowId) {
+        // 기존 워크플로우 업데이트
+        await ApiService.updateWorkflow(workflowId, workflowData);
       } else {
-        savedWorkflows.push({
-          id: workflowId,
-          name: workflowData.name,
-          type: 'file',
-          createdAt: workflowData.updatedAt,
-          updatedAt: workflowData.updatedAt
-        });
-      }
-      
-      localStorage.setItem('arch_flow_workflows', JSON.stringify(savedWorkflows));
-      
-      if (!currentWorkflowId) {
+        // 새 워크플로우 저장
+        await ApiService.saveWorkflow(workflowData);
         setCurrentWorkflowId(workflowId);
       }
       
       console.log('자동 저장 완료:', workflowData.name);
     } catch (error) {
       console.error('자동 저장 실패:', error);
+      // 백엔드 실패 시 로컬 스토리지에 백업
+      try {
+        localStorage.setItem(`workflow_${workflowId}`, JSON.stringify(workflowData));
+        
+        const savedWorkflows = JSON.parse(localStorage.getItem('arch_flow_workflows') || '[]');
+        const existingIndex = savedWorkflows.findIndex(w => w.id === workflowId);
+        
+        if (existingIndex >= 0) {
+          savedWorkflows[existingIndex] = {
+            ...savedWorkflows[existingIndex],
+            name: workflowData.name,
+            updatedAt: workflowData.updatedAt
+          };
+        } else {
+          savedWorkflows.push({
+            id: workflowId,
+            name: workflowData.name,
+            type: 'file',
+            createdAt: workflowData.updatedAt,
+            updatedAt: workflowData.updatedAt
+          });
+        }
+        
+        localStorage.setItem('arch_flow_workflows', JSON.stringify(savedWorkflows));
+        
+        if (!currentWorkflowId) {
+          setCurrentWorkflowId(workflowId);
+        }
+        
+        console.log('로컬 백업 저장 완료:', workflowData.name);
+      } catch (localError) {
+        console.error('로컬 백업 저장 실패:', localError);
+      }
     }
   }, [nodes, edges, currentWorkflowId, autoSaveEnabled]);
 
@@ -131,19 +145,33 @@ const WorkflowCanvasInner = () => {
     }
   }, [selectedNodes, onNodesDelete]);
 
-  const onSaveWorkflow = (workflow) => {
-    const workflowData = { nodes, edges, name: workflow.name };
-    localStorage.setItem(`workflow_${workflow.id}`, JSON.stringify(workflowData));
-    alert(`워크플로우 '${workflow.name}'이 저장되었습니다.`);
+  const onSaveWorkflow = async (workflow) => {
+    const workflowData = { 
+      ...workflow,
+      nodes, 
+      edges, 
+      name: workflow.name 
+    };
+    
+    try {
+      await ApiService.saveWorkflow(workflowData);
+      setCurrentWorkflowId(workflow.id);
+    } catch (error) {
+      console.error('워크플로우 저장 실패:', error);
+    }
   };
 
-  const onLoadWorkflow = (workflow) => {
-    const saved = localStorage.getItem(`workflow_${workflow.id}`);
-    if (saved) {
-      const { nodes: savedNodes, edges: savedEdges } = JSON.parse(saved);
-      setNodes(savedNodes || []);
-      setEdges(savedEdges || []);
-      setCurrentWorkflowId(workflow.id); // 현재 워크플로우 ID 설정
+  const onLoadWorkflow = async (workflow) => {
+    try {
+      const workflowData = await ApiService.getWorkflow(workflow.id);
+      if (workflowData) {
+        const { nodes: savedNodes, edges: savedEdges } = workflowData;
+        setNodes(savedNodes || []);
+        setEdges(savedEdges || []);
+        setCurrentWorkflowId(workflow.id);
+      }
+    } catch (error) {
+      console.error('워크플로우 불러오기 실패:', error);
     }
   };
 
