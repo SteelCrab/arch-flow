@@ -191,6 +191,13 @@ const WorkflowCanvasInner = () => {
     }
   };
 
+  const deleteNode = useCallback((nodeIdToDelete) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeIdToDelete));
+    setEdges((eds) => eds.filter((edge) => 
+      edge.source !== nodeIdToDelete && edge.target !== nodeIdToDelete
+    ));
+  }, [setNodes, setEdges]);
+
   // 기존 노드들에 onDelete 함수 추가
   useEffect(() => {
     setNodes((nds) => 
@@ -203,13 +210,6 @@ const WorkflowCanvasInner = () => {
       }))
     );
   }, [deleteNode]);
-
-  const deleteNode = useCallback((nodeIdToDelete) => {
-    setNodes((nds) => nds.filter((node) => node.id !== nodeIdToDelete));
-    setEdges((eds) => eds.filter((edge) => 
-      edge.source !== nodeIdToDelete && edge.target !== nodeIdToDelete
-    ));
-  }, [setNodes, setEdges]);
 
   const createNewNode = useCallback((type, position) => {
     const baseData = {
