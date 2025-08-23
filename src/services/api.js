@@ -183,9 +183,14 @@ class ApiService {
   // 백엔드 연결 상태 확인
   async checkBackendHealth() {
     try {
-      const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
+      const healthUrl = API_BASE_URL.replace('/api', '') + '/health';
+      const response = await fetch(healthUrl, {
+        method: 'GET',
+        timeout: 5000 // 5초 타임아웃
+      });
       return response.ok;
     } catch (error) {
+      console.warn('Backend health check failed:', error);
       return false;
     }
   }

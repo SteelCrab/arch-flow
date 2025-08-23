@@ -17,8 +17,13 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
   }, []);
 
   const checkBackendConnection = async () => {
-    const connected = await ApiService.checkBackendHealth();
-    setBackendConnected(connected);
+    try {
+      const connected = await ApiService.checkBackendHealth();
+      setBackendConnected(connected);
+    } catch (error) {
+      console.warn('Backend connection check failed:', error);
+      setBackendConnected(false);
+    }
   };
 
   const loadWorkflows = async () => {
