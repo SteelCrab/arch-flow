@@ -144,7 +144,6 @@ const WorkflowCanvasInner = () => {
       setNodes(savedNodes || []);
       setEdges(savedEdges || []);
       setCurrentWorkflowId(workflow.id); // 현재 워크플로우 ID 설정
-      alert(`워크플로우 '${workflow.name}'을 불러왔습니다.`);
     }
   };
 
@@ -271,19 +270,29 @@ const WorkflowCanvasInner = () => {
       <div className={`sidebar-container ${!sidebarOpen ? 'closed' : ''}`}>
         <div className="sidebar-toggle-header">
           <div className="header-controls">
-            <div className="auto-save-toggle">
-              <label>
-                <input 
-                  type="checkbox" 
-                  checked={autoSaveEnabled} 
-                  onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-                />
-                <span>자동 저장</span>
-              </label>
+            <div className="current-workflow-info">
+              {currentWorkflowId && (
+                <div className="workflow-status">
+                  <span className="workflow-indicator">📄</span>
+                  <span className="workflow-text">워크플로우 편집 중</span>
+                </div>
+              )}
             </div>
-            <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
-            </button>
+            <div className="header-actions">
+              <div className="auto-save-toggle">
+                <label>
+                  <input 
+                    type="checkbox" 
+                    checked={autoSaveEnabled} 
+                    onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                  />
+                  <span>자동 저장</span>
+                </label>
+              </div>
+              <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
+              </button>
+            </div>
           </div>
         </div>
         {sidebarOpen && (

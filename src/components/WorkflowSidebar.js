@@ -57,7 +57,7 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
       onSaveWorkflow(newWorkflow);
     }
 
-    alert(`워크플로우 '${newWorkflow.name}'이 저장되었습니다.`);
+    // alert(`워크플로우 '${newWorkflow.name}'이 저장되었습니다.`);
   };
 
   const handleLoad = (workflow) => {
@@ -121,7 +121,7 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     
     setEditingId(null);
     setEditingName('');
-    alert(`워크플로우 이름이 '${editingName.trim()}'으로 변경되었습니다.`);
+    // alert(`워크플로우 이름이 '${editingName.trim()}'으로 변경되었습니다.`);
   };
 
   const handleKeyPress = (e) => {
