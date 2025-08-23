@@ -6,7 +6,7 @@ const NotionBlock = ({ data, isConnectable, id }) => {
   const [pageTitle, setPageTitle] = useState(data.pageTitle || '');
   const [databaseId, setDatabaseId] = useState(data.databaseId || '');
   const [action, setAction] = useState(data.action || 'create_page');
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving] = useState(false);
 
   const handleTitleChange = (e) => {
     setPageTitle(e.target.value);

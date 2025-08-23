@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Bot, Settings, X } from 'lucide-react';
+import { Bot, X } from 'lucide-react';
 
 const AIAgentBlock = ({ data, isConnectable, id }) => {
   const [systemPrompt, setSystemPrompt] = useState(data.systemPrompt || '');
@@ -9,7 +9,7 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
   const [apiKey, setApiKey] = useState(data.apiKey || '');
   const [temperature, setTemperature] = useState(data.temperature || 0.7);
   const [provider, setProvider] = useState(data.provider || 'openai');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing] = useState(false);
 
   const handleSystemPromptChange = (e) => {
     setSystemPrompt(e.target.value);

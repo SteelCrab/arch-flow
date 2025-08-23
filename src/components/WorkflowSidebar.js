@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, File, Plus, Save, FolderPlus } from 'lucide-react';
+import { File, Save, FolderPlus } from 'lucide-react';
 
 const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
   const [workflows, setWorkflows] = useState([

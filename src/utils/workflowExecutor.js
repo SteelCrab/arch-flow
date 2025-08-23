@@ -1,4 +1,3 @@
-import { ConditionEvaluator } from './conditionEvaluator';
 import { ConditionEngine } from './conditionEngine';
 
 export class WorkflowExecutor {
@@ -45,6 +44,10 @@ export class WorkflowExecutor {
       case 'scheduleBlock':
         await this.executeScheduleBlock(node, inputData);
         break;
+
+      default:
+        console.warn(`Unknown node type: ${node.type}`);
+        break;
     }
   }
 
@@ -70,7 +73,7 @@ export class WorkflowExecutor {
   }
 
   async executeAIAgent(node, inputData) {
-    const { systemPrompt, userPrompt, model, provider, apiKey, temperature } = node.data;
+    const { systemPrompt, model, provider } = node.data;
     
     console.log(`AI 에이전트 실행: ${provider}/${model}`);
     
@@ -92,7 +95,7 @@ export class WorkflowExecutor {
   }
 
   async executeScheduleBlock(node, inputData) {
-    const { scheduleType, cronExpression, interval } = node.data;
+    const { scheduleType } = node.data;
     
     console.log(`스케줄 설정: ${scheduleType}`);
     

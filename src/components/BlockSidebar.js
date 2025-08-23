@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Bot, BookOpen, Split, Clock, ChevronLeft } from 'lucide-react';
+import { FileText, Bot, BookOpen, Split, Clock } from 'lucide-react';
 
 const BlockSidebar = ({ onAddBlock, isOpen, onToggle }) => {
   const [tooltip, setTooltip] = useState({ show: false, text: '', x: 0, y: 0 });

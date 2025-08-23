@@ -1,7 +1,8 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const Joi = require('joi');
-const WorkflowService = require('../services/workflowService');
+// const WorkflowService = require('../services/workflowService');
+const WorkflowService = require('../services/memoryWorkflowService');
 
 const router = express.Router();
 

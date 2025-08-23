@@ -19,7 +19,7 @@ import ScheduleBlock from './blocks/ScheduleBlock';
 import BlockSidebar from './BlockSidebar';
 import WorkflowSidebar from './WorkflowSidebar';
 import { WorkflowExecutor } from '../utils/workflowExecutor';
-import { Menu, ChevronLeft } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
 const nodeTypes = {
   inputBlock: InputBlock,
@@ -112,7 +112,7 @@ const WorkflowCanvasInner = () => {
       setNodes((nds) => nds.concat(newNode));
       setNodeId((id) => id + 1);
     },
-    [nodeId, setNodes]
+    [nodeId, setNodes, createNewNode]
   );
 
   const deleteNode = useCallback((nodeIdToDelete) => {
