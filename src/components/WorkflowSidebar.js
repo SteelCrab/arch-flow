@@ -120,7 +120,12 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
 
     try {
       setIsLoading(true);
+      
+      // 기존 워크플로우 데이터 가져오기
+      const existingWorkflow = await ApiService.getWorkflow(workflowId);
+      
       const updatedWorkflow = {
+        ...existingWorkflow, // 기존 데이터 유지 (nodes, edges 포함)
         name: editingName.trim(),
         updatedAt: new Date().toISOString()
       };
