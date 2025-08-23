@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -40,6 +40,66 @@ const WorkflowCanvasInner = () => {
   const [nodeId, setNodeId] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedNodes, setSelectedNodes] = useState([]);
+  const [currentWorkflowId, setCurrentWorkflowId] = useState(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+
+  // 자동 저장 함수
+  const autoSaveWorkflow = useCallback(() => {
+    if (!autoSaveEnabled || nodes.length === 0) return;
+
+    const workflowId = currentWorkflowId || `auto_${Date.now()}`;
+    const workflowData = {
+      id: workflowId,
+      name: currentWorkflowId ? `워크플로우 ${workflowId}` : `자동 저장 ${new Date().toLocaleTimeString()}`,
+      nodes,
+      edges,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      // 현재 워크플로우 저장
+      localStorage.setItem(`workflow_${workflowId}`, JSON.stringify(workflowData));
+      
+      // 워크플로우 목록 업데이트
+      const savedWorkflows = JSON.parse(localStorage.getItem('arch_flow_workflows') || '[]');
+      const existingIndex = savedWorkflows.findIndex(w => w.id === workflowId);
+      
+      if (existingIndex >= 0) {
+        savedWorkflows[existingIndex] = {
+          ...savedWorkflows[existingIndex],
+          name: workflowData.name,
+          updatedAt: workflowData.updatedAt
+        };
+      } else {
+        savedWorkflows.push({
+          id: workflowId,
+          name: workflowData.name,
+          type: 'file',
+          createdAt: workflowData.updatedAt,
+          updatedAt: workflowData.updatedAt
+        });
+      }
+      
+      localStorage.setItem('arch_flow_workflows', JSON.stringify(savedWorkflows));
+      
+      if (!currentWorkflowId) {
+        setCurrentWorkflowId(workflowId);
+      }
+      
+      console.log('자동 저장 완료:', workflowData.name);
+    } catch (error) {
+      console.error('자동 저장 실패:', error);
+    }
+  }, [nodes, edges, currentWorkflowId, autoSaveEnabled]);
+
+  // nodes나 edges가 변경될 때마다 자동 저장 (디바운스 적용)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      autoSaveWorkflow();
+    }, 2000); // 2초 후 자동 저장
+
+    return () => clearTimeout(timer);
+  }, [nodes, edges, autoSaveWorkflow]);
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -83,6 +143,7 @@ const WorkflowCanvasInner = () => {
       const { nodes: savedNodes, edges: savedEdges } = JSON.parse(saved);
       setNodes(savedNodes || []);
       setEdges(savedEdges || []);
+      setCurrentWorkflowId(workflow.id); // 현재 워크플로우 ID 설정
       alert(`워크플로우 '${workflow.name}'을 불러왔습니다.`);
     }
   };
@@ -209,9 +270,21 @@ const WorkflowCanvasInner = () => {
     <div className="workflow-container">
       <div className={`sidebar-container ${!sidebarOpen ? 'closed' : ''}`}>
         <div className="sidebar-toggle-header">
-          <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
-          </button>
+          <div className="header-controls">
+            <div className="auto-save-toggle">
+              <label>
+                <input 
+                  type="checkbox" 
+                  checked={autoSaveEnabled} 
+                  onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                />
+                <span>자동 저장</span>
+              </label>
+            </div>
+            <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
+            </button>
+          </div>
         </div>
         {sidebarOpen && (
           <>

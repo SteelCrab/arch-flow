@@ -556,3 +556,42 @@ input[type="text"]:focus {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+/* 자동 저장 토글 스타일 */
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.auto-save-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auto-save-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auto-save-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #3b82f6;
+}
+
+.auto-save-toggle span {
+  font-weight: 500;
+}
+
+.sidebar-toggle-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
