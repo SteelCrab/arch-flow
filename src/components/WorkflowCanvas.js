@@ -87,6 +87,38 @@ const WorkflowCanvasInner = () => {
     }
   };
 
+  const deleteNode = useCallback((nodeIdToDelete) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeIdToDelete));
+    setEdges((eds) => eds.filter((edge) => 
+      edge.source !== nodeIdToDelete && edge.target !== nodeIdToDelete
+    ));
+  }, [setNodes, setEdges]);
+
+  const createNewNode = useCallback((type, position) => {
+    const baseData = {
+      inputBlock: { content: '', onDelete: deleteNode },
+      aiAgentBlock: { 
+        systemPrompt: '', 
+        userPrompt: '', 
+        model: 'gpt-4o', 
+        provider: 'openai',
+        apiKey: '', 
+        temperature: 0.7,
+        onDelete: deleteNode 
+      },
+      notionBlock: { pageTitle: '', action: 'create_page', onDelete: deleteNode },
+      conditionBlock: { conditionType: 'contains', condition: '', onDelete: deleteNode },
+      scheduleBlock: { scheduleType: 'interval', cronExpression: '0 9 * * *', interval: 60, onDelete: deleteNode },
+    };
+
+    return {
+      id: `${nodeId}`,
+      type,
+      position,
+      data: baseData[type] || {},
+    };
+  }, [nodeId, deleteNode]);
+
   const onDragOver = useCallback((event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -112,40 +144,8 @@ const WorkflowCanvasInner = () => {
       setNodes((nds) => nds.concat(newNode));
       setNodeId((id) => id + 1);
     },
-    [nodeId, setNodes, createNewNode]
+    [createNewNode, setNodes]
   );
-
-  const deleteNode = useCallback((nodeIdToDelete) => {
-    setNodes((nds) => nds.filter((node) => node.id !== nodeIdToDelete));
-    setEdges((eds) => eds.filter((edge) => 
-      edge.source !== nodeIdToDelete && edge.target !== nodeIdToDelete
-    ));
-  }, [setNodes, setEdges]);
-
-  const createNewNode = (type, position) => {
-    const baseData = {
-      inputBlock: { content: '', onDelete: deleteNode },
-      aiAgentBlock: { 
-        systemPrompt: '', 
-        userPrompt: '', 
-        model: 'gpt-4o', 
-        provider: 'openai',
-        apiKey: '', 
-        temperature: 0.7,
-        onDelete: deleteNode 
-      },
-      notionBlock: { pageTitle: '', action: 'create_page', onDelete: deleteNode },
-      conditionBlock: { conditionType: 'contains', condition: '', onDelete: deleteNode },
-      scheduleBlock: { scheduleType: 'interval', cronExpression: '0 9 * * *', interval: 60, onDelete: deleteNode },
-    };
-
-    return {
-      id: `${nodeId}`,
-      type,
-      position,
-      data: baseData[type] || {},
-    };
-  };
 
   const onAddBlock = (blockType) => {
     const position = { x: 300 + Math.random() * 200, y: 100 + Math.random() * 200 };
