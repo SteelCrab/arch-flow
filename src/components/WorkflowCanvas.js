@@ -49,9 +49,21 @@ const WorkflowCanvasInner = () => {
     if (!autoSaveEnabled || nodes.length === 0) return;
 
     const workflowId = currentWorkflowId || `auto_${Date.now()}`;
+    
+    // 기존 워크플로우 정보 가져오기
+    let existingName = null;
+    if (currentWorkflowId) {
+      try {
+        const existing = await ApiService.getWorkflow(currentWorkflowId);
+        existingName = existing?.name;
+      } catch (error) {
+        console.warn('기존 워크플로우 정보 조회 실패:', error);
+      }
+    }
+    
     const workflowData = {
       id: workflowId,
-      name: currentWorkflowId ? `워크플로우 ${workflowId}` : `자동 저장 ${new Date().toLocaleTimeString()}`,
+      name: existingName || (currentWorkflowId ? `워크플로우 ${workflowId}` : `자동 저장 ${new Date().toLocaleTimeString()}`),
       nodes,
       edges,
       updatedAt: new Date().toISOString()
@@ -59,8 +71,12 @@ const WorkflowCanvasInner = () => {
 
     try {
       if (currentWorkflowId) {
-        // 기존 워크플로우 업데이트
-        await ApiService.updateWorkflow(workflowId, workflowData);
+        // 기존 워크플로우 업데이트 (이름 유지)
+        await ApiService.updateWorkflow(workflowId, {
+          nodes,
+          edges,
+          updatedAt: workflowData.updatedAt
+        });
       } else {
         // 새 워크플로우 저장
         await ApiService.saveWorkflow(workflowData);
@@ -78,9 +94,9 @@ const WorkflowCanvasInner = () => {
         const existingIndex = savedWorkflows.findIndex(w => w.id === workflowId);
         
         if (existingIndex >= 0) {
+          // 기존 워크플로우는 이름 유지
           savedWorkflows[existingIndex] = {
             ...savedWorkflows[existingIndex],
-            name: workflowData.name,
             updatedAt: workflowData.updatedAt
           };
         } else {
@@ -174,6 +190,19 @@ const WorkflowCanvasInner = () => {
       console.error('워크플로우 불러오기 실패:', error);
     }
   };
+
+  // 기존 노드들에 onDelete 함수 추가
+  useEffect(() => {
+    setNodes((nds) => 
+      nds.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          onDelete: deleteNode
+        }
+      }))
+    );
+  }, [deleteNode]);
 
   const deleteNode = useCallback((nodeIdToDelete) => {
     setNodes((nds) => nds.filter((node) => node.id !== nodeIdToDelete));
