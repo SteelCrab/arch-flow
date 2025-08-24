@@ -336,15 +336,15 @@ const WorkflowCanvasInner = () => {
   };
 
   const executeWorkflow = async () => {
-    console.log('워크플로우 실행 시작');
+    console.log('🚀 워크플로우 실행 시작');
     
-    // 입력 블록 확인
-    const inputNodes = nodes.filter(node => node.type === 'inputBlock');
-    if (inputNodes.length === 0) {
-      alert('입력 블록이 필요합니다.');
+    if (nodes.length === 0) {
+      alert('실행할 워크플로우가 없습니다. 블록을 추가해주세요.');
       return;
     }
-
+    
+    // Input 블록 검증
+    const inputNodes = nodes.filter(node => node.type === 'inputBlock');
     const hasEmptyInput = inputNodes.some(node => !node.data.content?.trim());
     if (hasEmptyInput) {
       alert('모든 입력 블록에 데이터를 입력해주세요.');
@@ -353,25 +353,71 @@ const WorkflowCanvasInner = () => {
 
     try {
       // 워크플로우 실행 엔진 생성
+      const { default: WorkflowExecutor } = await import('../utils/WorkflowExecutor');
       const executor = new WorkflowExecutor(nodes, edges);
       
       // 실행 시작
-      const results = await executor.executeWorkflow();
+      console.log('📋 실행할 노드 수:', nodes.length);
+      console.log('🔗 연결된 엣지 수:', edges.length);
       
-      console.log('실행 결과:', results);
+      const results = await executor.executeWorkflow();
+      const summary = executor.getSummary();
+      
+      console.log('✅ 실행 완료:', summary);
       
       // 결과 표시
-      let resultMessage = '워크플로우 실행 완료!\n\n';
-      results.forEach((result, nodeId) => {
+      let resultMessage = `🎉 워크플로우 실행 완료!\n\n`;
+      resultMessage += `📊 실행 통계:\n`;
+      resultMessage += `- 총 블록 수: ${summary.totalBlocks}\n`;
+      resultMessage += `- 성공: ${summary.successfulBlocks}\n`;
+      resultMessage += `- 실패: ${summary.failedBlocks}\n\n`;
+      
+      resultMessage += `📋 상세 결과:\n`;
+      Object.entries(summary.results).forEach(([nodeId, result]) => {
         const node = nodes.find(n => n.id === nodeId);
-        resultMessage += `${node?.type || nodeId}: ${result}\n`;
+        const nodeType = node?.type || 'unknown';
+        const status = result.success ? '✅' : '❌';
+        
+        resultMessage += `${status} ${nodeType}: `;
+        
+        if (result.success) {
+          switch (result.type) {
+            case 'input':
+              resultMessage += `"${result.content?.substring(0, 50)}${result.content?.length > 50 ? '...' : ''}"`;
+              break;
+            case 'ai':
+              resultMessage += `${result.model} 응답 생성됨`;
+              break;
+            case 'notion':
+              resultMessage += `페이지 "${result.pageTitle}" 생성됨`;
+              break;
+            case 'condition':
+              resultMessage += `조건 ${result.result ? '참' : '거짓'} → ${result.output}`;
+              break;
+            case 'schedule':
+              resultMessage += `다음 실행: ${new Date(result.nextExecution).toLocaleString()}`;
+              break;
+            default:
+              resultMessage += '실행 완료';
+          }
+        } else {
+          resultMessage += `오류: ${result.error}`;
+        }
+        resultMessage += '\n';
       });
       
-      alert(resultMessage);
+      // 결과 모달 또는 알림으로 표시
+      const showDetailedResults = window.confirm(
+        resultMessage + '\n\n상세 결과를 콘솔에서 확인하시겠습니까?'
+      );
+      
+      if (showDetailedResults) {
+        console.table(summary.results);
+      }
       
     } catch (error) {
-      console.error('워크플로우 실행 오류:', error);
-      alert(`워크플로우 실행 중 오류가 발생했습니다: ${error.message}`);
+      console.error('❌ 워크플로우 실행 오류:', error);
+      alert(`워크플로우 실행 중 오류가 발생했습니다:\n\n${error.message}`);
     }
   };
 
