@@ -221,31 +221,36 @@ const WorkflowCanvasInner = () => {
     }
   };
 
-  const onLoadWorkflow = async (workflow) => {
+  const onLoadWorkflow = async (workflowId) => {
     try {
-      const workflowData = await ApiService.getWorkflow(workflow.id);
+      console.log('Loading workflow with ID:', workflowId);
+      const workflowData = await ApiService.getWorkflow(workflowId);
       if (workflowData) {
         const { nodes: savedNodes, edges: savedEdges } = workflowData;
         setNodes(savedNodes || []);
         setEdges(savedEdges || []);
-        setCurrentWorkflowId(workflow.id);
+        setCurrentWorkflowId(workflowId);
         setCurrentWorkflowName(workflowData.name);
         setHasUnsavedChanges(false);
         console.log(`워크플로우 "${workflowData.name}" 불러오기 완료`);
+        alert(`워크플로우 "${workflowData.name}"를 불러왔습니다.`);
       }
     } catch (error) {
       console.error('워크플로우 불러오기 실패:', error);
       // 로컬 스토리지에서 시도
       try {
-        const localData = localStorage.getItem(`workflow_${workflow.id}`);
+        const localData = localStorage.getItem(`workflow_${workflowId}`);
         if (localData) {
           const workflowData = JSON.parse(localData);
           setNodes(workflowData.nodes || []);
           setEdges(workflowData.edges || []);
-          setCurrentWorkflowId(workflow.id);
+          setCurrentWorkflowId(workflowId);
           setCurrentWorkflowName(workflowData.name);
           setHasUnsavedChanges(false);
           console.log(`로컬에서 워크플로우 "${workflowData.name}" 불러오기 완료`);
+          alert(`로컬에서 워크플로우 "${workflowData.name}"를 불러왔습니다.`);
+        } else {
+          throw new Error('워크플로우를 찾을 수 없습니다.');
         }
       } catch (localError) {
         console.error('로컬 워크플로우 불러오기 실패:', localError);
@@ -445,8 +450,18 @@ const WorkflowCanvasInner = () => {
         </div>
         {sidebarOpen && (
           <WorkflowSidebar 
-            onSaveWorkflow={onSaveWorkflow}
-            onLoadWorkflow={onLoadWorkflow}
+            onSave={saveWorkflow}
+            onLoad={onLoadWorkflow}
+            onNew={() => {
+              setNodes([]);
+              setEdges([]);
+              setCurrentWorkflowId(null);
+              setCurrentWorkflowName(null);
+              setHasUnsavedChanges(false);
+            }}
+            hasUnsavedChanges={hasUnsavedChanges}
+            currentWorkflowName={currentWorkflowName}
+            currentWorkflowId={currentWorkflowId}
           />
         )}
       </div>
