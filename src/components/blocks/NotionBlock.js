@@ -5,6 +5,8 @@ import { BookOpen, ExternalLink, X } from 'lucide-react';
 const NotionBlock = ({ data, isConnectable, id }) => {
   const [pageTitle, setPageTitle] = useState(data.pageTitle || '');
   const [databaseId, setDatabaseId] = useState(data.databaseId || '');
+  const [pageId, setPageId] = useState(data.pageId || '');
+  const [apiToken, setApiToken] = useState(data.apiToken || '');
   const [action, setAction] = useState(data.action || 'create_page');
   const [isSaving] = useState(false);
 
@@ -12,6 +14,8 @@ const NotionBlock = ({ data, isConnectable, id }) => {
   useEffect(() => {
     if (data.pageTitle !== undefined) setPageTitle(data.pageTitle);
     if (data.databaseId !== undefined) setDatabaseId(data.databaseId);
+    if (data.pageId !== undefined) setPageId(data.pageId);
+    if (data.apiToken !== undefined) setApiToken(data.apiToken);
     if (data.action !== undefined) setAction(data.action);
   }, [data]);
 
@@ -46,6 +50,18 @@ const NotionBlock = ({ data, isConnectable, id }) => {
     updateData({ databaseId: value });
   };
 
+  const handlePageIdChange = (e) => {
+    const value = e.target.value;
+    setPageId(value);
+    updateData({ pageId: value });
+  };
+
+  const handleApiTokenChange = (e) => {
+    const value = e.target.value;
+    setApiToken(value);
+    updateData({ apiToken: value });
+  };
+
   const handleActionChange = (e) => {
     const value = e.target.value;
     setAction(value);
@@ -69,6 +85,20 @@ const NotionBlock = ({ data, isConnectable, id }) => {
       </div>
       
       <div className="block-content">
+        <div className="form-group">
+          <label>Notion API 토큰</label>
+          <input
+            type="password"
+            value={apiToken}
+            onChange={handleApiTokenChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            placeholder="secret_xxxxxxxxxx"
+            className="api-token-input"
+          />
+        </div>
+        
         <div className="form-group">
           <label>작업 유형</label>
           <select 
@@ -97,19 +127,39 @@ const NotionBlock = ({ data, isConnectable, id }) => {
           />
         </div>
         
-        <div className="form-group">
-          <label>Database ID (선택사항)</label>
-          <input
-            type="text"
-            value={databaseId}
-            onChange={handleDatabaseIdChange}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            placeholder="Notion Database ID"
-          />
-          <small>데이터베이스에 추가할 때만 필요</small>
-        </div>
+        {action === 'update_page' && (
+          <div className="form-group">
+            <label>페이지 ID</label>
+            <input
+              type="text"
+              value={pageId}
+              onChange={handlePageIdChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder="32자리 페이지 ID"
+              className="page-id-input"
+            />
+            <small>업데이트할 페이지의 ID</small>
+          </div>
+        )}
+        
+        {action === 'add_to_db' && (
+          <div className="form-group">
+            <label>Database ID</label>
+            <input
+              type="text"
+              value={databaseId}
+              onChange={handleDatabaseIdChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder="32자리 데이터베이스 ID"
+              className="database-id-input"
+            />
+            <small>데이터를 추가할 데이터베이스 ID</small>
+          </div>
+        )}
         
         {data.notionUrl && (
           <div className="notion-link">

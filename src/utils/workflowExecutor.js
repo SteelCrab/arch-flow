@@ -383,45 +383,216 @@ ${modelInfo.description}
 
   // Notion Block 실행
   async executeNotionBlock(node, inputData) {
-    const { pageTitle, content, databaseId } = node.data || {};
+    const { pageTitle, action, pageId, databaseId, apiToken } = node.data || {};
+    
+    // API 토큰 확인 (환경변수 또는 블록 설정)
+    const token = apiToken || process.env.REACT_APP_NOTION_API_KEY;
+    if (!token) {
+      throw new Error('Notion API 토큰이 필요합니다. 블록 설정에서 입력하거나 환경변수 REACT_APP_NOTION_API_KEY를 설정하세요.');
+    }
     
     // 입력 데이터를 Notion 콘텐츠에 포함
-    let finalContent = content || '';
+    let finalContent = '';
     Object.values(inputData).forEach(input => {
-      if (input.content || input.response) {
-        finalContent += `\n\n${input.content || input.response}`;
+      if (input.content) {
+        finalContent += input.content + '\n\n';
+      }
+      if (input.response) {
+        finalContent += input.response + '\n\n';
       }
     });
     
-    // Notion API 호출 시뮬레이션
-    const notionResult = await this.callNotionAPI(pageTitle, finalContent, databaseId);
+    if (!finalContent.trim()) {
+      finalContent = '워크플로우에서 생성된 콘텐츠';
+    }
+    
+    // Notion API 호출
+    const notionResult = await this.callNotionAPI(action, token, pageTitle, finalContent, pageId, databaseId);
     
     return {
       success: true,
       type: 'notion',
+      action: action,
       pageTitle: pageTitle,
-      content: finalContent,
+      content: finalContent.substring(0, 200) + '...',
       pageUrl: notionResult.url,
+      pageId: notionResult.id,
       timestamp: new Date().toISOString()
     };
   }
 
   // Notion API 호출
-  async callNotionAPI(title, content, databaseId) {
-    // 실제 구현에서는 Notion API 호출
-    // 현재는 시뮬레이션
+  async callNotionAPI(action, apiToken, title, content, pageId, databaseId) {
+    try {
+      let result;
+      
+      switch (action) {
+        case 'create_page':
+          if (!pageId) {
+            throw new Error('페이지 생성을 위해 부모 페이지 ID가 필요합니다.');
+          }
+          result = await this.createNotionPage(apiToken, pageId, title, content);
+          break;
+          
+        case 'update_page':
+          if (!pageId) {
+            throw new Error('페이지 업데이트를 위해 페이지 ID가 필요합니다.');
+          }
+          result = await this.updateNotionPage(apiToken, pageId, title, content);
+          break;
+          
+        case 'add_to_db':
+          if (!databaseId) {
+            throw new Error('데이터베이스 추가를 위해 데이터베이스 ID가 필요합니다.');
+          }
+          result = await this.addToNotionDatabase(apiToken, databaseId, title, content);
+          break;
+          
+        default:
+          throw new Error(`지원하지 않는 Notion 작업: ${action}`);
+      }
+      
+      console.log(`✅ Notion ${action} 성공: ${title}`);
+      return result;
+      
+    } catch (error) {
+      console.error(`❌ Notion API 오류:`, error);
+      
+      // 개발 모드에서는 Mock 응답 반환
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 개발 모드: Mock Notion 응답 사용');
+        const mockPageId = `mock_${Date.now()}`;
+        return {
+          id: mockPageId,
+          url: `https://notion.so/${mockPageId}`,
+          title: title
+        };
+      }
+      
+      throw error;
+    }
+  }
+
+  // Notion 페이지 생성
+  async createNotionPage(apiToken, parentId, title, content) {
+    const response = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({
+        parent: {
+          type: 'page_id',
+          page_id: parentId.replace(/-/g, '')
+        },
+        properties: {
+          title: {
+            title: [{
+              text: { content: title }
+            }]
+          }
+        },
+        children: [{
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [{
+              type: 'text',
+              text: { content: content }
+            }]
+          }
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Notion 페이지 생성 실패: ${error.message}`);
+    }
+
+    return await response.json();
+  }
+
+  // Notion 페이지 업데이트
+  async updateNotionPage(apiToken, pageId, title, content) {
+    const cleanPageId = pageId.replace(/-/g, '');
     
-    const mockPageId = `page_${Date.now()}`;
-    const mockUrl = `https://notion.so/${mockPageId}`;
-    
-    console.log(`📄 Notion 페이지 생성: ${title}`);
-    console.log(`📝 내용: ${content.substring(0, 100)}...`);
-    
+    // 페이지에 새 블록 추가
+    const response = await fetch(`https://api.notion.com/v1/blocks/${cleanPageId}/children`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({
+        children: [{
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [{
+              type: 'text',
+              text: { content: `[${new Date().toLocaleString()}] ${content}` }
+            }]
+          }
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Notion 페이지 업데이트 실패: ${error.message}`);
+    }
+
     return {
-      id: mockPageId,
-      url: mockUrl,
+      id: cleanPageId,
+      url: `https://notion.so/${cleanPageId}`,
       title: title
     };
+  }
+
+  // Notion 데이터베이스에 추가
+  async addToNotionDatabase(apiToken, databaseId, title, content) {
+    const response = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({
+        parent: {
+          type: 'database_id',
+          database_id: databaseId.replace(/-/g, '')
+        },
+        properties: {
+          Name: {
+            title: [{
+              text: { content: title }
+            }]
+          }
+        },
+        children: [{
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [{
+              type: 'text',
+              text: { content: content }
+            }]
+          }
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Notion 데이터베이스 추가 실패: ${error.message}`);
+    }
+
+    return await response.json();
   }
 
   // Smart Route Block 실행

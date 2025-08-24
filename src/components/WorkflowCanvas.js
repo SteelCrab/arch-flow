@@ -291,7 +291,7 @@ const WorkflowCanvasInner = () => {
         temperature: 0.7,
         onDelete: deleteNode 
       },
-      notionBlock: { pageTitle: '', action: 'create_page', onDelete: deleteNode },
+      notionBlock: { pageTitle: '', action: 'create_page', pageId: '', databaseId: '', apiToken: '', onDelete: deleteNode },
       conditionBlock: { conditionType: 'contains', condition: '', onDelete: deleteNode },
       scheduleBlock: { scheduleType: 'interval', cronExpression: '0 9 * * *', interval: 60, onDelete: deleteNode },
     };
