@@ -15,7 +15,11 @@
   flex-direction: column;
   width: 250px;
   background: #f8f9fa;
-  border-right: 1px solid #dee2e6;
+  border-left: 1px solid #dee2e6;
+}
+
+.sidebar-container.right {
+  order: 2;
 }
 
 /* 워크플로우 사이드바 개선된 스타일 */
@@ -805,7 +809,15 @@
 }
 
 .sidebar-toggle-btn-top .rotated {
+  transform: rotate(0deg);
+}
+
+.sidebar-container.right .sidebar-toggle-btn-top {
   transform: rotate(180deg);
+}
+
+.sidebar-container.right.closed .sidebar-toggle-btn-top {
+  transform: rotate(0deg);
 }
 
 .block-list {

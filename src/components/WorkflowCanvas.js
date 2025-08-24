@@ -433,33 +433,6 @@ const WorkflowCanvasInner = () => {
 
   return (
     <div className="workflow-container">
-      <div className={`sidebar-container ${!sidebarOpen ? 'closed' : ''}`}>
-        <div className="sidebar-toggle-header">
-          <div className="header-controls">
-            <div className="current-workflow-info">
-              {/* 워크플로우 상태는 캔버스로 이동 */}
-            </div>
-            <div className="header-actions">
-              <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
-              </button>
-            </div>
-          </div>
-        </div>
-        {sidebarOpen && (
-          <>
-            <WorkflowSidebar 
-              onSaveWorkflow={onSaveWorkflow}
-              onLoadWorkflow={onLoadWorkflow}
-            />
-            <BlockSidebar 
-              onAddBlock={onAddBlock} 
-              isOpen={sidebarOpen} 
-              onToggle={() => setSidebarOpen(!sidebarOpen)} 
-            />
-          </>
-        )}
-      </div>
       <div className="workflow-main" ref={reactFlowWrapper}>
         <div className="canvas-header">
           <div className="canvas-header-left">
@@ -506,6 +479,30 @@ const WorkflowCanvasInner = () => {
           <MiniMap />
           <Background variant="dots" gap={12} size={1} />
         </ReactFlow>
+      </div>
+      <div className={`sidebar-container right ${!sidebarOpen ? 'closed' : ''}`}>
+        <div className="sidebar-toggle-header">
+          <div className="header-controls">
+            <div className="header-actions">
+              <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
+              </button>
+            </div>
+          </div>
+        </div>
+        {sidebarOpen && (
+          <>
+            <WorkflowSidebar 
+              onSaveWorkflow={onSaveWorkflow}
+              onLoadWorkflow={onLoadWorkflow}
+            />
+            <BlockSidebar 
+              onAddBlock={onAddBlock} 
+              isOpen={sidebarOpen} 
+              onToggle={() => setSidebarOpen(!sidebarOpen)} 
+            />
+          </>
+        )}
       </div>
     </div>
   );
