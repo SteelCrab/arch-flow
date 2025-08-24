@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Bot, X, Settings } from 'lucide-react';
 
@@ -10,44 +10,49 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
   const [maxTokens, setMaxTokens] = useState(data.maxTokens || 1000);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  // 데이터가 외부에서 변경될 때 상태 업데이트
+  useEffect(() => {
+    if (data.systemPrompt !== undefined) setSystemPrompt(data.systemPrompt);
+    if (data.userPrompt !== undefined) setUserPrompt(data.userPrompt);
+    if (data.modelId !== undefined) setModelId(data.modelId);
+    if (data.temperature !== undefined) setTemperature(data.temperature);
+    if (data.maxTokens !== undefined) setMaxTokens(data.maxTokens);
+  }, [data]);
+
+  const updateData = (updates) => {
+    if (data.onChange) {
+      data.onChange(updates);
+    }
+  };
+
   const handleSystemPromptChange = (e) => {
-    setSystemPrompt(e.target.value);
-    data.onChange && data.onChange({
-      ...data,
-      systemPrompt: e.target.value
-    });
+    const value = e.target.value;
+    setSystemPrompt(value);
+    updateData({ systemPrompt: value });
   };
 
   const handleUserPromptChange = (e) => {
-    setUserPrompt(e.target.value);
-    data.onChange && data.onChange({
-      ...data,
-      userPrompt: e.target.value
-    });
+    const value = e.target.value;
+    setUserPrompt(value);
+    updateData({ userPrompt: value });
   };
 
   const handleModelChange = (e) => {
-    setModelId(e.target.value);
-    data.onChange && data.onChange({
-      ...data,
-      modelId: e.target.value
-    });
+    const value = e.target.value;
+    setModelId(value);
+    updateData({ modelId: value });
   };
 
   const handleTemperatureChange = (e) => {
-    setTemperature(parseFloat(e.target.value));
-    data.onChange && data.onChange({
-      ...data,
-      temperature: parseFloat(e.target.value)
-    });
+    const value = parseFloat(e.target.value);
+    setTemperature(value);
+    updateData({ temperature: value });
   };
 
   const handleMaxTokensChange = (e) => {
-    setMaxTokens(parseInt(e.target.value));
-    data.onChange && data.onChange({
-      ...data,
-      maxTokens: parseInt(e.target.value)
-    });
+    const value = parseInt(e.target.value);
+    setMaxTokens(value);
+    updateData({ maxTokens: value });
   };
 
   const modelOptions = [
@@ -64,6 +69,7 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
       <button 
         className="delete-btn" 
         onClick={() => data.onDelete && data.onDelete(id)}
+        title="블록 삭제"
       >
         <X size={12} />
       </button>

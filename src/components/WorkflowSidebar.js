@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { File, Save, FolderPlus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { File, Save, FolderPlus, Trash2, Edit2, Check, X, Plus, RefreshCw } from 'lucide-react';
 import ApiService from '../services/api';
 
-const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
+const WorkflowSidebar = ({ 
+  onSave, 
+  onLoad, 
+  onNew, 
+  hasUnsavedChanges, 
+  currentWorkflowName, 
+  currentWorkflowId 
+}) => {
   const [workflows, setWorkflows] = useState([]);
   const [newWorkflowName, setNewWorkflowName] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -30,6 +37,7 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     setIsLoading(true);
     try {
       const workflowList = await ApiService.getWorkflows();
+      console.log('Loaded workflows:', workflowList);
       setWorkflows(workflowList);
     } catch (error) {
       console.error('워크플로우 목록 로드 실패:', error);
@@ -38,490 +46,299 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveNew = async () => {
     if (!newWorkflowName.trim()) {
       alert('워크플로우 이름을 입력해주세요.');
       return;
     }
 
-    const newWorkflow = {
-      id: `wf_${Date.now()}`,
-      name: newWorkflowName.trim(),
-      nodes: [],
-      edges: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
     try {
-      setIsLoading(true);
+      // 현재 워크플로우를 새 이름으로 저장
+      const newWorkflow = {
+        id: `wf_${Date.now()}`,
+        name: newWorkflowName.trim(),
+        nodes: [],
+        edges: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
       await ApiService.saveWorkflow(newWorkflow);
-      
-      if (onSaveWorkflow) {
-        onSaveWorkflow(newWorkflow);
-      }
-      
       setNewWorkflowName('');
-      await loadWorkflows(); // 목록 새로고침
-      alert(`"${newWorkflow.name}" 워크플로우가 생성되었습니다!`);
-    } catch (error) {
-      console.error('워크플로우 저장 실패:', error);
-      alert('워크플로우 저장에 실패했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLoad = async (workflow) => {
-    try {
-      setIsLoading(true);
-      const workflowData = await ApiService.getWorkflow(workflow.id);
+      await loadWorkflows();
       
-      if (workflowData && onLoadWorkflow) {
-        onLoadWorkflow(workflowData);
+      // 새 워크플로우 생성
+      if (onNew) {
+        onNew();
+      }
+      
+      alert(`새 워크플로우 "${newWorkflow.name}"가 생성되었습니다.`);
+    } catch (error) {
+      console.error('새 워크플로우 생성 실패:', error);
+      alert(`생성 실패: ${error.message}`);
+    }
+  };
+
+  const handleLoadWorkflow = async (workflow) => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm('저장되지 않은 변경사항이 있습니다. 다른 워크플로우를 불러오시겠습니까?');
+      if (!confirmed) return;
+    }
+
+    try {
+      console.log('Loading workflow from sidebar:', workflow);
+      if (onLoad) {
+        await onLoad(workflow.id);
       }
     } catch (error) {
-      console.error('워크플로우 불러오기 실패:', error);
-      alert('워크플로우를 불러오는데 실패했습니다.');
-    } finally {
-      setIsLoading(false);
+      console.error('워크플로우 로드 실패:', error);
+      alert(`로드 실패: ${error.message}`);
     }
   };
 
-  const handleDelete = async (workflowId, workflowName) => {
-    if (window.confirm(`'${workflowName}' 워크플로우를 삭제하시겠습니까?`)) {
-      try {
-        setIsLoading(true);
-        await ApiService.deleteWorkflow(workflowId);
-        await loadWorkflows(); // 목록 새로고침
-        alert(`워크플로우 '${workflowName}'이 삭제되었습니다.`);
-      } catch (error) {
-        console.error('워크플로우 삭제 실패:', error);
-        alert('워크플로우 삭제에 실패했습니다.');
-      } finally {
-        setIsLoading(false);
+  const handleSaveCurrent = async () => {
+    if (onSave) {
+      await onSave();
+      await loadWorkflows(); // 목록 새로고침
+    }
+  };
+
+  const handleDeleteWorkflow = async (workflowId, workflowName) => {
+    const confirmed = window.confirm(`"${workflowName}" 워크플로우를 삭제하시겠습니까?`);
+    if (!confirmed) return;
+
+    try {
+      await ApiService.deleteWorkflow(workflowId);
+      await loadWorkflows();
+      
+      // 현재 열린 워크플로우가 삭제된 경우 새 워크플로우로 전환
+      if (currentWorkflowId === workflowId && onNew) {
+        onNew();
       }
+      
+      alert(`워크플로우 "${workflowName}"가 삭제되었습니다.`);
+    } catch (error) {
+      console.error('워크플로우 삭제 실패:', error);
+      alert(`삭제 실패: ${error.message}`);
     }
   };
 
-  const handleStartEdit = (workflow) => {
-    setEditingId(workflow.id);
-    setEditingName(workflow.name);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditingName('');
-  };
-
-  const handleSaveEdit = async (workflowId) => {
+  const handleEditWorkflow = async (workflowId) => {
     if (!editingName.trim()) {
       alert('워크플로우 이름을 입력해주세요.');
       return;
     }
 
     try {
-      setIsLoading(true);
-      
-      // 기존 워크플로우 데이터 가져오기
-      const existingWorkflow = await ApiService.getWorkflow(workflowId);
-      
-      const updatedWorkflow = {
-        ...existingWorkflow, // 기존 데이터 유지 (nodes, edges 포함)
-        name: editingName.trim(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      await ApiService.updateWorkflow(workflowId, updatedWorkflow);
-      
-      setEditingId(null);
-      setEditingName('');
-      await loadWorkflows(); // 목록 새로고침
+      const workflow = await ApiService.getWorkflow(workflowId);
+      if (workflow) {
+        const updatedWorkflow = {
+          ...workflow,
+          name: editingName.trim(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        await ApiService.updateWorkflow(workflowId, updatedWorkflow);
+        await loadWorkflows();
+        setEditingId(null);
+        setEditingName('');
+        alert('워크플로우 이름이 변경되었습니다.');
+      }
     } catch (error) {
-      console.error('워크플로우 수정 실패:', error);
-      alert('워크플로우 이름 수정에 실패했습니다.');
-    } finally {
-      setIsLoading(false);
+      console.error('워크플로우 이름 변경 실패:', error);
+      alert(`이름 변경 실패: ${error.message}`);
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSave();
-    }
+  const startEditing = (workflow) => {
+    setEditingId(workflow.id);
+    setEditingName(workflow.name);
   };
 
-  const handleEditKeyPress = (e, workflowId) => {
-    if (e.key === 'Enter') {
-      handleSaveEdit(workflowId);
-    } else if (e.key === 'Escape') {
-      handleCancelEdit();
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      return new Date(dateString).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '날짜 없음';
     }
   };
 
   return (
-    <div className="workflow-sidebar">
-      <div className="workflow-header">
-        <div className="header-title">
-          <h4>나의 워크플로우</h4>
-          <div className="connection-status">
-            <div className={`status-indicator ${backendConnected ? 'connected' : 'disconnected'}`}>
-              <span className="status-dot"></span>
-              <span className="status-text">
-                {backendConnected ? 'API' : '로컬'}
-              </span>
-            </div>
-          </div>
-        </div>
-        <button className="new-folder-btn" title="새 폴더">
-          <FolderPlus size={14} />
-        </button>
-      </div>
-      
-      {/* 새 워크플로우 저장 */}
-      <div className="save-workflow-section">
-        <div className="input-group">
-          <input
-            type="text"
-            placeholder="워크플로우 이름 입력..."
-            value={newWorkflowName}
-            onChange={(e) => setNewWorkflowName(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="workflow-name-input"
-          />
-          <button 
-            onClick={handleSave}
-            className="save-btn"
-            title="현재 워크플로우 저장"
-            disabled={!newWorkflowName.trim()}
+    <div className="workflow-sidebar p-4 bg-white border-t border-gray-200">
+      {/* 연결 상태 표시 */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-700">워크플로우</h3>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-xs text-gray-500">
+            {backendConnected ? '연결됨' : '오프라인'}
+          </span>
+          <button
+            onClick={loadWorkflows}
+            className="p-1 hover:bg-gray-100 rounded"
+            title="새로고침"
           >
-            <Save size={14} />
+            <RefreshCw size={12} />
           </button>
         </div>
       </div>
 
-      {/* 저장된 워크플로우 목록 */}
-      <div className="workflow-list">
+      {/* 현재 워크플로우 정보 */}
+      {currentWorkflowName && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-blue-800">
+                {currentWorkflowName}
+              </div>
+              <div className="text-xs text-blue-600">
+                현재 워크플로우
+              </div>
+            </div>
+            <button
+              onClick={handleSaveCurrent}
+              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+              disabled={!hasUnsavedChanges}
+            >
+              <Save size={12} className="inline mr-1" />
+              저장
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 새 워크플로우 생성 */}
+      <div className="mb-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newWorkflowName}
+            onChange={(e) => setNewWorkflowName(e.target.value)}
+            placeholder="새 워크플로우 이름"
+            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+            onKeyPress={(e) => e.key === 'Enter' && handleSaveNew()}
+          />
+          <button
+            onClick={handleSaveNew}
+            className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+          >
+            <Plus size={12} />
+          </button>
+        </div>
+      </div>
+
+      {/* 워크플로우 목록 */}
+      <div className="workflow-list max-h-64 overflow-y-auto">
         {isLoading ? (
-          <div className="loading-state">
-            <span>로딩 중...</span>
+          <div className="text-center py-4 text-sm text-gray-500">
+            로딩 중...
           </div>
         ) : workflows.length === 0 ? (
-          <div className="empty-state">
-            <p>저장된 워크플로우가 없습니다.</p>
-            <p>위에서 워크플로우를 저장해보세요!</p>
+          <div className="text-center py-4 text-sm text-gray-500">
+            저장된 워크플로우가 없습니다.
           </div>
         ) : (
           workflows.map((workflow) => (
-            <div key={workflow.id} className="workflow-item">
+            <div
+              key={workflow.id}
+              className={`workflow-item p-2 mb-2 border rounded cursor-pointer hover:bg-gray-50 ${
+                currentWorkflowId === workflow.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+              }`}
+            >
               {editingId === workflow.id ? (
-                // 편집 모드
-                <div className="workflow-edit-mode">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={editingName}
                     onChange={(e) => setEditingName(e.target.value)}
-                    onKeyPress={(e) => handleEditKeyPress(e, workflow.id)}
-                    className="workflow-edit-input"
+                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') handleEditWorkflow(workflow.id);
+                      if (e.key === 'Escape') cancelEditing();
+                    }}
                     autoFocus
                   />
-                  <div className="edit-buttons">
-                    <button
-                      className="save-edit-btn"
-                      onClick={() => handleSaveEdit(workflow.id)}
-                      title="저장"
-                    >
-                      <Check size={12} />
-                    </button>
-                    <button
-                      className="cancel-edit-btn"
-                      onClick={handleCancelEdit}
-                      title="취소"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleEditWorkflow(workflow.id)}
+                    className="p-1 text-green-600 hover:bg-green-100 rounded"
+                  >
+                    <Check size={12} />
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                  >
+                    <X size={12} />
+                  </button>
                 </div>
               ) : (
-                // 일반 모드
-                <>
-                  <div 
-                    className="workflow-info"
-                    onClick={() => handleLoad(workflow)}
-                    title={`'${workflow.name}' 불러오기`}
-                  >
-                    <File size={14} />
-                    <span className="workflow-name">{workflow.name}</span>
+                <div onClick={() => handleLoadWorkflow(workflow)}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <File size={14} className="text-gray-500" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-800">
+                          {workflow.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatDate(workflow.updatedAt || workflow.createdAt)}
+                        </div>
+                        {workflow.nodes && (
+                          <div className="text-xs text-gray-400">
+                            {workflow.nodes.length}개 블록
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing(workflow);
+                        }}
+                        className="p-1 text-gray-500 hover:bg-gray-200 rounded"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteWorkflow(workflow.id, workflow.name);
+                        }}
+                        className="p-1 text-red-500 hover:bg-red-100 rounded"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="workflow-actions">
-                    <button
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEdit(workflow);
-                      }}
-                      title="이름 수정"
-                    >
-                      <Edit2 size={12} />
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(workflow.id, workflow.name);
-                      }}
-                      title="삭제"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </>
+                </div>
               )}
             </div>
           ))
         )}
       </div>
 
-      <style jsx>{`
-        .save-workflow-section {
-          margin-bottom: 20px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .input-group {
-          display: flex;
-          gap: 8px;
-        }
-
-        .workflow-name-input {
-          flex: 1;
-          padding: 8px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          font-size: 14px;
-          outline: none;
-          transition: border-color 0.2s;
-        }
-
-        .workflow-name-input:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .save-btn {
-          padding: 8px 12px;
-          background: #3b82f6;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: background 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .save-btn:hover:not(:disabled) {
-          background: #2563eb;
-        }
-
-        .save-btn:disabled {
-          background: #9ca3af;
-          cursor: not-allowed;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 32px 16px;
-          color: #6b7280;
-        }
-
-        .empty-state p {
-          margin: 8px 0;
-          font-size: 14px;
-        }
-
-        .workflow-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-          background: white;
-        }
-
-        .workflow-item:hover {
-          background: #f8fafc;
-          border-color: #3b82f6;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .workflow-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex: 1;
-          color: #374151;
-        }
-
-        .workflow-name {
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .delete-btn {
-          background: none;
-          border: none;
-          padding: 4px;
-          border-radius: 4px;
-          cursor: pointer;
-          color: #6b7280;
-          transition: all 0.2s;
-        }
-
-        .workflow-item:hover .workflow-actions {
-          opacity: 1;
-        }
-
-        .delete-btn:hover {
-          background: #fee2e2;
-          color: #dc2626;
-        }
-
-        .workflow-actions {
-          display: flex;
-          gap: 4px;
-          opacity: 0;
-          transition: opacity 0.2s;
-        }
-
-        .edit-btn {
-          background: none;
-          border: none;
-          padding: 4px;
-          border-radius: 4px;
-          cursor: pointer;
-          color: #6b7280;
-          transition: all 0.2s;
-        }
-
-        .edit-btn:hover {
-          background: #e0f2fe;
-          color: #0369a1;
-        }
-
-        .workflow-edit-mode {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          width: 100%;
-        }
-
-        .workflow-edit-input {
-          flex: 1;
-          padding: 6px 8px;
-          border: 1px solid #3b82f6;
-          border-radius: 4px;
-          font-size: 14px;
-          outline: none;
-          background: white;
-        }
-
-        .edit-buttons {
-          display: flex;
-          gap: 4px;
-        }
-
-        .save-edit-btn {
-          background: #10b981;
-          color: white;
-          border: none;
-          padding: 4px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: background 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .save-edit-btn:hover {
-          background: #059669;
-        }
-
-        .cancel-edit-btn {
-          background: #6b7280;
-          color: white;
-          border: none;
-          padding: 4px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: background 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .cancel-edit-btn:hover {
-          background: #4b5563;
-        }
-
-        .header-title {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex: 1;
-        }
-
-        .connection-status {
-          margin-left: 8px;
-        }
-
-        .status-indicator {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 10px;
-          padding: 2px 6px;
-          border-radius: 12px;
-          background: #f3f4f6;
-        }
-
-        .status-indicator.connected {
-          background: #dcfce7;
-          color: #166534;
-        }
-
-        .status-indicator.disconnected {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        .status-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: currentColor;
-        }
-
-        .status-text {
-          font-weight: 500;
-        }
-
-        .loading-state {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 20px;
-          color: #6b7280;
-          font-size: 14px;
-        }
-      `}</style>
+      {/* 새 워크플로우 버튼 */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <button
+          onClick={onNew}
+          className="w-full px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 flex items-center justify-center gap-2"
+        >
+          <FolderPlus size={14} />
+          새 워크플로우
+        </button>
+      </div>
     </div>
   );
 };

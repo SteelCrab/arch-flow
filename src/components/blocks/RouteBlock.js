@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Split, X, Plus, Trash2, Brain } from 'lucide-react';
 
@@ -7,33 +7,40 @@ const RouteBlock = ({ data, isConnectable, id }) => {
   const [categories, setCategories] = useState(data.categories || ['긍정적', '부정적', '중립적']);
   const [aiModel, setAiModel] = useState(data.aiModel || 'claude-3-haiku');
   const [confidence, setConfidence] = useState(data.confidence || 0.7);
+  const [keywordRules, setKeywordRules] = useState(data.keywordRules || '');
+
+  // 데이터가 외부에서 변경될 때 상태 업데이트
+  useEffect(() => {
+    if (data.routingMode !== undefined) setRoutingMode(data.routingMode);
+    if (data.categories !== undefined) setCategories(data.categories);
+    if (data.aiModel !== undefined) setAiModel(data.aiModel);
+    if (data.confidence !== undefined) setConfidence(data.confidence);
+    if (data.keywordRules !== undefined) setKeywordRules(data.keywordRules);
+  }, [data]);
+
+  const updateData = (updates) => {
+    if (data.onChange) {
+      data.onChange(updates);
+    }
+  };
 
   const handleRoutingModeChange = (e) => {
-    const newMode = e.target.value;
-    setRoutingMode(newMode);
-    data.onChange && data.onChange({
-      ...data,
-      routingMode: newMode
-    });
+    const value = e.target.value;
+    setRoutingMode(value);
+    updateData({ routingMode: value });
   };
 
   const handleCategoryChange = (index, value) => {
     const newCategories = [...categories];
     newCategories[index] = value;
     setCategories(newCategories);
-    data.onChange && data.onChange({
-      ...data,
-      categories: newCategories
-    });
+    updateData({ categories: newCategories });
   };
 
   const addCategory = () => {
     const newCategories = [...categories, `카테고리 ${categories.length + 1}`];
     setCategories(newCategories);
-    data.onChange && data.onChange({
-      ...data,
-      categories: newCategories
-    });
+    updateData({ categories: newCategories });
   };
 
   const removeCategory = (index) => {
@@ -43,26 +50,25 @@ const RouteBlock = ({ data, isConnectable, id }) => {
     }
     const newCategories = categories.filter((_, i) => i !== index);
     setCategories(newCategories);
-    data.onChange && data.onChange({
-      ...data,
-      categories: newCategories
-    });
+    updateData({ categories: newCategories });
   };
 
   const handleAiModelChange = (e) => {
-    setAiModel(e.target.value);
-    data.onChange && data.onChange({
-      ...data,
-      aiModel: e.target.value
-    });
+    const value = e.target.value;
+    setAiModel(value);
+    updateData({ aiModel: value });
   };
 
   const handleConfidenceChange = (e) => {
-    setConfidence(parseFloat(e.target.value));
-    data.onChange && data.onChange({
-      ...data,
-      confidence: parseFloat(e.target.value)
-    });
+    const value = parseFloat(e.target.value);
+    setConfidence(value);
+    updateData({ confidence: value });
+  };
+
+  const handleKeywordRulesChange = (e) => {
+    const value = e.target.value;
+    setKeywordRules(value);
+    updateData({ keywordRules: value });
   };
 
   const aiModelOptions = [
@@ -77,6 +83,7 @@ const RouteBlock = ({ data, isConnectable, id }) => {
       <button 
         className="delete-btn" 
         onClick={() => data.onDelete && data.onDelete(id)}
+        title="블록 삭제"
       >
         <X size={12} />
       </button>
@@ -141,6 +148,7 @@ const RouteBlock = ({ data, isConnectable, id }) => {
                     type="button"
                     onClick={() => removeCategory(index)}
                     className="remove-category-btn"
+                    title="카테고리 삭제"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -151,6 +159,7 @@ const RouteBlock = ({ data, isConnectable, id }) => {
               type="button"
               onClick={addCategory}
               className="add-category-btn"
+              title="카테고리 추가"
             >
               <Plus size={14} />
               카테고리 추가
@@ -162,9 +171,12 @@ const RouteBlock = ({ data, isConnectable, id }) => {
           <div className="form-group">
             <label>키워드 규칙</label>
             <textarea
+              value={keywordRules}
+              onChange={handleKeywordRulesChange}
               placeholder="각 줄에 '키워드 -> 카테고리' 형식으로 입력&#10;예: 좋다 -> 긍정적&#10;나쁘다 -> 부정적"
               rows={3}
             />
+            <small>각 줄에 하나씩 '키워드 → 카테고리' 형식으로 입력</small>
           </div>
         )}
       </div>
