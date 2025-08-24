@@ -42,13 +42,16 @@ const WorkflowCanvasInner = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [currentWorkflowId, setCurrentWorkflowId] = useState(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // 자동 저장 함수
-  const autoSaveWorkflow = useCallback(async () => {
-    if (!autoSaveEnabled || nodes.length === 0) return;
+  // 수동 저장 함수
+  const saveWorkflow = useCallback(async () => {
+    if (nodes.length === 0) {
+      alert('저장할 워크플로우가 없습니다.');
+      return;
+    }
 
-    const workflowId = currentWorkflowId || `auto_${Date.now()}`;
+    const workflowId = currentWorkflowId || `workflow_${Date.now()}`;
     
     // 기존 워크플로우 정보 가져오기
     let existingName = null;
@@ -63,7 +66,7 @@ const WorkflowCanvasInner = () => {
     
     const workflowData = {
       id: workflowId,
-      name: existingName || (currentWorkflowId ? `워크플로우 ${workflowId}` : `자동 저장 ${new Date().toLocaleTimeString()}`),
+      name: existingName || (currentWorkflowId ? `워크플로우 ${workflowId}` : `새 워크플로우 ${new Date().toLocaleTimeString()}`),
       nodes,
       edges,
       updatedAt: new Date().toISOString()
@@ -83,9 +86,11 @@ const WorkflowCanvasInner = () => {
         setCurrentWorkflowId(workflowId);
       }
       
-      console.log('자동 저장 완료:', workflowData.name);
+      setHasUnsavedChanges(false);
+      console.log('워크플로우 저장 완료:', workflowData.name);
+      alert('워크플로우가 저장되었습니다!');
     } catch (error) {
-      console.error('자동 저장 실패:', error);
+      console.error('워크플로우 저장 실패:', error);
       // 백엔드 실패 시 로컬 스토리지에 백업
       try {
         localStorage.setItem(`workflow_${workflowId}`, JSON.stringify(workflowData));
@@ -115,21 +120,37 @@ const WorkflowCanvasInner = () => {
           setCurrentWorkflowId(workflowId);
         }
         
+        setHasUnsavedChanges(false);
         console.log('로컬 백업 저장 완료:', workflowData.name);
+        alert('워크플로우가 로컬에 저장되었습니다!');
       } catch (localError) {
         console.error('로컬 백업 저장 실패:', localError);
+        alert('워크플로우 저장에 실패했습니다.');
       }
     }
-  }, [nodes, edges, currentWorkflowId, autoSaveEnabled]);
+  }, [nodes, edges, currentWorkflowId]);
 
-  // nodes나 edges가 변경될 때마다 자동 저장 (디바운스 적용)
+  // nodes나 edges가 변경될 때마다 변경사항 추적
   useEffect(() => {
-    const timer = setTimeout(() => {
-      autoSaveWorkflow();
-    }, 2000); // 2초 후 자동 저장
+    if (nodes.length > 0 || edges.length > 0) {
+      setHasUnsavedChanges(true);
+    }
+  }, [nodes, edges]);
 
-    return () => clearTimeout(timer);
-  }, [nodes, edges, autoSaveWorkflow]);
+  // Cmd+S (Mac) / Ctrl+S (Windows) 키보드 단축키
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault();
+        saveWorkflow();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [saveWorkflow]);
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -166,14 +187,33 @@ const WorkflowCanvasInner = () => {
       ...workflow,
       nodes, 
       edges, 
-      name: workflow.name 
+      name: workflow.name,
+      updatedAt: new Date().toISOString()
     };
     
     try {
       await ApiService.saveWorkflow(workflowData);
       setCurrentWorkflowId(workflow.id);
+      setHasUnsavedChanges(false);
+      console.log('새 워크플로우 저장 완료:', workflowData.name);
     } catch (error) {
       console.error('워크플로우 저장 실패:', error);
+      // 로컬 스토리지에 백업
+      localStorage.setItem(`workflow_${workflowData.id}`, JSON.stringify(workflowData));
+      
+      const savedWorkflows = JSON.parse(localStorage.getItem('arch_flow_workflows') || '[]');
+      savedWorkflows.push({
+        id: workflowData.id,
+        name: workflowData.name,
+        type: 'file',
+        createdAt: workflowData.updatedAt,
+        updatedAt: workflowData.updatedAt
+      });
+      localStorage.setItem('arch_flow_workflows', JSON.stringify(savedWorkflows));
+      
+      setCurrentWorkflowId(workflowData.id);
+      setHasUnsavedChanges(false);
+      console.log('로컬 백업 저장 완료:', workflowData.name);
     }
   };
 
@@ -185,6 +225,7 @@ const WorkflowCanvasInner = () => {
         setNodes(savedNodes || []);
         setEdges(savedEdges || []);
         setCurrentWorkflowId(workflow.id);
+        setHasUnsavedChanges(false);
       }
     } catch (error) {
       console.error('워크플로우 불러오기 실패:', error);
@@ -331,21 +372,22 @@ const WorkflowCanvasInner = () => {
               {currentWorkflowId && (
                 <div className="workflow-status">
                   <span className="workflow-indicator">📄</span>
-                  <span className="workflow-text">워크플로우 편집 중</span>
+                  <span className="workflow-text">
+                    워크플로우 편집 중
+                    {hasUnsavedChanges && <span className="unsaved-indicator"> *</span>}
+                  </span>
                 </div>
               )}
             </div>
             <div className="header-actions">
-              <div className="auto-save-toggle">
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={autoSaveEnabled} 
-                    onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-                  />
-                  <span>자동 저장</span>
-                </label>
-              </div>
+              <button 
+                className="save-btn"
+                onClick={saveWorkflow}
+                disabled={!hasUnsavedChanges}
+                title="Cmd+S로도 저장 가능"
+              >
+                💾 저장
+              </button>
               <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
                 <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
               </button>
