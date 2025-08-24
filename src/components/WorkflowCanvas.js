@@ -433,6 +433,23 @@ const WorkflowCanvasInner = () => {
 
   return (
     <div className="workflow-container">
+      <div className={`sidebar-container left ${!sidebarOpen ? 'closed' : ''}`}>
+        <div className="sidebar-toggle-header">
+          <div className="header-controls">
+            <div className="header-actions">
+              <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
+              </button>
+            </div>
+          </div>
+        </div>
+        {sidebarOpen && (
+          <WorkflowSidebar 
+            onSaveWorkflow={onSaveWorkflow}
+            onLoadWorkflow={onLoadWorkflow}
+          />
+        )}
+      </div>
       <div className="workflow-main" ref={reactFlowWrapper}>
         <div className="canvas-header">
           <div className="canvas-header-left">
@@ -491,17 +508,11 @@ const WorkflowCanvasInner = () => {
           </div>
         </div>
         {sidebarOpen && (
-          <>
-            <WorkflowSidebar 
-              onSaveWorkflow={onSaveWorkflow}
-              onLoadWorkflow={onLoadWorkflow}
-            />
-            <BlockSidebar 
-              onAddBlock={onAddBlock} 
-              isOpen={sidebarOpen} 
-              onToggle={() => setSidebarOpen(!sidebarOpen)} 
-            />
-          </>
+          <BlockSidebar 
+            onAddBlock={onAddBlock} 
+            isOpen={sidebarOpen} 
+            onToggle={() => setSidebarOpen(!sidebarOpen)} 
+          />
         )}
       </div>
     </div>
