@@ -14,7 +14,6 @@ import '@xyflow/react/dist/style.css';
 import InputBlock from './blocks/InputBlock';
 import AIAgentBlock from './blocks/AIAgentBlock';
 import NotionBlock from './blocks/NotionBlock';
-import ConditionBlock from './blocks/ConditionBlock';
 import ScheduleBlock from './blocks/ScheduleBlock';
 import RouteBlock from './blocks/RouteBlock';
 import ApiService from '../services/api';
@@ -26,7 +25,6 @@ const nodeTypes = {
   inputBlock: InputBlock,
   aiAgentBlock: AIAgentBlock,
   notionBlock: NotionBlock,
-  conditionBlock: ConditionBlock,
   scheduleBlock: ScheduleBlock,
   routeBlock: RouteBlock,
 };

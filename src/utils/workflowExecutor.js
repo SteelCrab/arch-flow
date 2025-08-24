@@ -86,9 +86,6 @@ class WorkflowExecutor {
         case 'notionBlock':
           result = await this.executeNotionBlock(node, inputData);
           break;
-        case 'conditionBlock':
-          result = await this.executeConditionBlock(node, inputData);
-          break;
         case 'scheduleBlock':
           result = await this.executeScheduleBlock(node, inputData);
           break;
@@ -427,95 +424,181 @@ ${modelInfo.description}
     };
   }
 
-  // Condition Block 실행
-  async executeConditionBlock(node, inputData) {
-    const { condition, trueValue, falseValue } = node.data || {};
-    
-    // 조건 평가 (간단한 문자열 포함 검사)
-    let conditionResult = false;
-    
-    if (condition && Object.keys(inputData).length > 0) {
-      const inputText = Object.values(inputData)
-        .map(input => input.content || input.response || '')
-        .join(' ')
-        .toLowerCase();
-      
-      conditionResult = inputText.includes(condition.toLowerCase());
-    }
-    
-    const result = conditionResult ? trueValue : falseValue;
-    
-    return {
-      success: true,
-      type: 'condition',
-      condition: condition,
-      result: conditionResult,
-      output: result,
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // Schedule Block 실행
-  async executeScheduleBlock(node, inputData) {
-    const { scheduleType, cronExpression, interval } = node.data || {};
-    
-    // 스케줄 정보만 반환 (실제 스케줄링은 백엔드에서 처리)
-    return {
-      success: true,
-      type: 'schedule',
-      scheduleType: scheduleType,
-      cronExpression: cronExpression,
-      interval: interval,
-      nextExecution: this.calculateNextExecution(scheduleType, cronExpression, interval),
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // 다음 실행 시간 계산
-  calculateNextExecution(scheduleType, cronExpression, interval) {
-    const now = new Date();
-    
-    if (scheduleType === 'interval' && interval) {
-      return new Date(now.getTime() + interval * 60000).toISOString();
-    }
-    
-    if (scheduleType === 'cron' && cronExpression) {
-      // 간단한 cron 파싱 (실제로는 cron-parser 라이브러리 사용)
-      return new Date(now.getTime() + 3600000).toISOString(); // 1시간 후
-    }
-    
-    return new Date(now.getTime() + 3600000).toISOString();
-  }
-
-  // Route Block 실행
+  // Smart Route Block 실행
   async executeRouteBlock(node, inputData) {
-    const { routes } = node.data || {};
+    const { routingMode, categories, customRules, aiModel, confidence } = node.data || {};
     
-    // 입력 데이터 기반으로 라우팅 결정
-    let selectedRoute = 'default';
+    // 입력 데이터 수집
+    const inputText = Object.values(inputData)
+      .map(input => input.content || input.response || '')
+      .join(' ');
     
-    if (routes && Object.keys(inputData).length > 0) {
-      const inputText = Object.values(inputData)
-        .map(input => input.content || input.response || '')
-        .join(' ')
-        .toLowerCase();
-      
-      // 각 라우트 조건 확인
-      for (const [routeName, condition] of Object.entries(routes)) {
-        if (inputText.includes(condition.toLowerCase())) {
-          selectedRoute = routeName;
-          break;
-        }
+    if (!inputText.trim()) {
+      return {
+        success: false,
+        error: '라우팅할 입력 데이터가 없습니다.',
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    let selectedCategory = categories[0] || 'default';
+    let confidenceScore = 0.5;
+    let reasoning = '';
+
+    try {
+      if (routingMode === 'ai-smart') {
+        const aiResult = await this.performAIRouting(inputText, categories, aiModel, confidence);
+        selectedCategory = aiResult.category;
+        confidenceScore = aiResult.confidence;
+        reasoning = aiResult.reasoning;
+      } else if (routingMode === 'keyword') {
+        const keywordResult = this.performKeywordRouting(inputText, categories, customRules);
+        selectedCategory = keywordResult.category;
+        confidenceScore = keywordResult.confidence;
+        reasoning = keywordResult.reasoning;
+      } else if (routingMode === 'hybrid') {
+        const hybridResult = await this.performHybridRouting(inputText, categories, customRules, aiModel, confidence);
+        selectedCategory = hybridResult.category;
+        confidenceScore = hybridResult.confidence;
+        reasoning = hybridResult.reasoning;
+      }
+
+      return {
+        success: true,
+        type: 'smart-route',
+        routingMode: routingMode,
+        selectedCategory: selectedCategory,
+        confidence: confidenceScore,
+        reasoning: reasoning,
+        inputText: inputText.substring(0, 200) + (inputText.length > 200 ? '...' : ''),
+        availableCategories: categories,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `라우팅 실행 오류: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  // AI 기반 라우팅
+  async performAIRouting(inputText, categories, aiModel, confidence) {
+    // Mock AI 분석 (실제로는 Bedrock API 호출)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const systemPrompt = `다음 텍스트를 분석하여 가장 적절한 카테고리로 분류해주세요.
+
+사용 가능한 카테고리: ${categories.join(', ')}
+
+분류 기준:
+- 텍스트의 감정, 의도, 내용을 종합적으로 분석
+- 가장 적합한 카테고리 하나만 선택
+- 신뢰도 점수 (0.0-1.0)도 함께 제공
+
+응답 형식: {"category": "선택된카테고리", "confidence": 0.85, "reasoning": "분류 근거"}`;
+
+    // 실제 구현에서는 Bedrock API 호출
+    const mockAnalysis = this.mockAIAnalysis(inputText, categories);
+    
+    return {
+      category: mockAnalysis.category,
+      confidence: mockAnalysis.confidence,
+      reasoning: `AI 분석 (${aiModel}): ${mockAnalysis.reasoning}`
+    };
+  }
+
+  // 키워드 기반 라우팅
+  performKeywordRouting(inputText, categories, customRules) {
+    const text = inputText.toLowerCase();
+    let bestMatch = { category: categories[0], score: 0, matchedKeywords: [] };
+
+    for (const category of categories) {
+      const rules = customRules[category] || '';
+      if (!rules.trim()) continue;
+
+      const keywords = rules.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+      const matchedKeywords = keywords.filter(keyword => text.includes(keyword));
+      const score = matchedKeywords.length / keywords.length;
+
+      if (score > bestMatch.score) {
+        bestMatch = { category, score, matchedKeywords };
       }
     }
-    
+
     return {
-      success: true,
-      type: 'route',
-      selectedRoute: selectedRoute,
-      availableRoutes: Object.keys(routes || {}),
-      timestamp: new Date().toISOString()
+      category: bestMatch.category,
+      confidence: bestMatch.score,
+      reasoning: bestMatch.matchedKeywords.length > 0 
+        ? `키워드 매칭: "${bestMatch.matchedKeywords.join(', ')}" 감지`
+        : '매칭되는 키워드가 없어 기본 카테고리 선택'
     };
+  }
+
+  // 하이브리드 라우팅 (AI + 키워드)
+  async performHybridRouting(inputText, categories, customRules, aiModel, confidence) {
+    const aiResult = await this.performAIRouting(inputText, categories, aiModel, confidence);
+    const keywordResult = this.performKeywordRouting(inputText, categories, customRules);
+
+    // AI와 키워드 결과를 가중 평균으로 결합
+    const aiWeight = 0.7;
+    const keywordWeight = 0.3;
+
+    let finalCategory = aiResult.category;
+    let finalConfidence = (aiResult.confidence * aiWeight) + (keywordResult.confidence * keywordWeight);
+
+    // 키워드 매칭이 매우 확실한 경우 우선시
+    if (keywordResult.confidence === 1.0) {
+      finalCategory = keywordResult.category;
+      finalConfidence = Math.max(finalConfidence, 0.9);
+    }
+
+    return {
+      category: finalCategory,
+      confidence: finalConfidence,
+      reasoning: `하이브리드 분석: AI(${Math.round(aiResult.confidence * 100)}%) + 키워드(${Math.round(keywordResult.confidence * 100)}%) = ${Math.round(finalConfidence * 100)}%`
+    };
+  }
+
+  // Mock AI 분석 (개발용)
+  mockAIAnalysis(inputText, categories) {
+    const text = inputText.toLowerCase();
+    
+    // 간단한 감정 분석 시뮬레이션
+    const positiveWords = ['좋', '훌륭', '추천', '만족', '최고', '완벽', '사랑', '행복'];
+    const negativeWords = ['나쁘', '싫', '실망', '최악', '화', '짜증', '문제', '불만'];
+    const neutralWords = ['보통', '그냥', '일반', '평범', '괜찮'];
+
+    let positiveScore = positiveWords.filter(word => text.includes(word)).length;
+    let negativeScore = negativeWords.filter(word => text.includes(word)).length;
+    let neutralScore = neutralWords.filter(word => text.includes(word)).length;
+
+    let selectedCategory = categories[0];
+    let confidence = 0.5;
+    let reasoning = '텍스트 패턴 분석 결과';
+
+    if (positiveScore > negativeScore && positiveScore > neutralScore) {
+      selectedCategory = categories.find(cat => 
+        cat.includes('긍정') || cat.includes('좋') || cat.includes('positive')
+      ) || categories[0];
+      confidence = Math.min(0.8 + (positiveScore * 0.1), 0.95);
+      reasoning = `긍정적 표현 ${positiveScore}개 감지`;
+    } else if (negativeScore > positiveScore && negativeScore > neutralScore) {
+      selectedCategory = categories.find(cat => 
+        cat.includes('부정') || cat.includes('나쁨') || cat.includes('negative')
+      ) || categories[1] || categories[0];
+      confidence = Math.min(0.8 + (negativeScore * 0.1), 0.95);
+      reasoning = `부정적 표현 ${negativeScore}개 감지`;
+    } else {
+      selectedCategory = categories.find(cat => 
+        cat.includes('중립') || cat.includes('보통') || cat.includes('neutral')
+      ) || categories[Math.floor(categories.length / 2)] || categories[0];
+      confidence = 0.6;
+      reasoning = '중립적 또는 혼합된 표현 감지';
+    }
+
+    return { category: selectedCategory, confidence, reasoning };
   }
 
   // 전체 워크플로우 실행

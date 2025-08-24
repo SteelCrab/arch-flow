@@ -29,14 +29,6 @@ const BlockSidebar = ({ onAddBlock, isOpen, onToggle }) => {
       tooltip: 'Notion 워크스페이스에 새 페이지를 생성하거나 기존 페이지를 업데이트하는 블록입니다. 데이터베이스 연동도 지원합니다.'
     },
     {
-      type: 'conditionBlock',
-      label: '조건 분기',
-      icon: Split,
-      color: '#fd7e14',
-      description: '규칙 기반 분기',
-      tooltip: '입력 데이터를 기반으로 조건을 평가하여 True/False 경로로 분기하는 블록입니다. 다양한 연산자를 지원합니다.'
-    },
-    {
       type: 'scheduleBlock',
       label: '스케줄러',
       icon: Clock,
@@ -46,11 +38,11 @@ const BlockSidebar = ({ onAddBlock, isOpen, onToggle }) => {
     },
     {
       type: 'routeBlock',
-      label: '라우터',
+      label: '스마트 라우터',
       icon: Split,
       color: '#17a2b8',
-      description: '동적 경로 선택',
-      tooltip: '입력 데이터의 내용에 따라 동적으로 다음 실행 경로를 선택하는 라우팅 블록입니다.'
+      description: '지능형 경로 선택',
+      tooltip: 'AI 기반 콘텐츠 분석으로 입력 데이터를 자동 분류하고 적절한 경로로 라우팅하는 지능형 블록입니다.'
     }
   ];
 
