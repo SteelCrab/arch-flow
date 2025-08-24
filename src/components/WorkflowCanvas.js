@@ -44,6 +44,18 @@ const WorkflowCanvasInner = () => {
   const [currentWorkflowName, setCurrentWorkflowName] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // 노드 데이터 업데이트 함수
+  const updateNodeData = useCallback((nodeId, updates) => {
+    setNodes((nds) => 
+      nds.map((node) => 
+        node.id === nodeId 
+          ? { ...node, data: { ...node.data, ...updates } }
+          : node
+      )
+    );
+    setHasUnsavedChanges(true);
+  }, [setNodes]);
+
   // 수동 저장 함수
   const saveWorkflow = useCallback(async () => {
     if (nodes.length === 0) {
@@ -186,9 +198,19 @@ const WorkflowCanvasInner = () => {
   }, [selectedNodes, onNodesDelete]);
 
   const onSaveWorkflow = async (workflow) => {
+    // 저장 시 함수 제거
+    const cleanNodes = nodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        onChange: undefined,
+        onDelete: undefined
+      }
+    }));
+    
     const workflowData = { 
       ...workflow,
-      nodes, 
+      nodes: cleanNodes, 
       edges, 
       name: workflow.name,
       updatedAt: new Date().toISOString()
@@ -227,7 +249,18 @@ const WorkflowCanvasInner = () => {
       const workflowData = await ApiService.getWorkflow(workflowId);
       if (workflowData) {
         const { nodes: savedNodes, edges: savedEdges } = workflowData;
-        setNodes(savedNodes || []);
+        
+        // 불러온 노드에 onChange, onDelete 함수 복원
+        const restoredNodes = (savedNodes || []).map(node => ({
+          ...node,
+          data: {
+            ...node.data,
+            onChange: (updates) => updateNodeData(node.id, updates),
+            onDelete: deleteNode
+          }
+        }));
+        
+        setNodes(restoredNodes);
         setEdges(savedEdges || []);
         setCurrentWorkflowId(workflowId);
         setCurrentWorkflowName(workflowData.name);
@@ -242,7 +275,18 @@ const WorkflowCanvasInner = () => {
         const localData = localStorage.getItem(`workflow_${workflowId}`);
         if (localData) {
           const workflowData = JSON.parse(localData);
-          setNodes(workflowData.nodes || []);
+          
+          // 로컬 데이터에도 함수 복원
+          const restoredNodes = (workflowData.nodes || []).map(node => ({
+            ...node,
+            data: {
+              ...node.data,
+              onChange: (updates) => updateNodeData(node.id, updates),
+              onDelete: deleteNode
+            }
+          }));
+          
+          setNodes(restoredNodes);
           setEdges(workflowData.edges || []);
           setCurrentWorkflowId(workflowId);
           setCurrentWorkflowName(workflowData.name);
@@ -266,43 +310,73 @@ const WorkflowCanvasInner = () => {
     ));
   }, [setNodes, setEdges]);
 
-  // 기존 노드들에 onDelete 함수 추가
+  // 기존 노드들에 onDelete 및 onChange 함수 추가
   useEffect(() => {
     setNodes((nds) => 
       nds.map((node) => ({
         ...node,
         data: {
           ...node.data,
-          onDelete: deleteNode
+          onDelete: deleteNode,
+          onChange: (updates) => updateNodeData(node.id, updates)
         }
       }))
     );
-  }, [deleteNode]);
+  }, [deleteNode, updateNodeData]);
 
   const createNewNode = useCallback((type, position) => {
+    const nodeIdStr = `${nodeId}`;
     const baseData = {
-      inputBlock: { content: '', onDelete: deleteNode },
+      inputBlock: { 
+        content: '', 
+        onDelete: deleteNode,
+        onChange: (updates) => updateNodeData(nodeIdStr, updates)
+      },
       aiAgentBlock: { 
         systemPrompt: '', 
         userPrompt: '', 
-        model: 'gpt-4o', 
-        provider: 'openai',
-        apiKey: '', 
+        modelId: 'anthropic.claude-3-sonnet-20240229-v1:0',
         temperature: 0.7,
-        onDelete: deleteNode 
+        maxTokens: 1000,
+        onDelete: deleteNode,
+        onChange: (updates) => updateNodeData(nodeIdStr, updates)
       },
-      notionBlock: { pageTitle: '', action: 'create_page', pageId: '', databaseId: '', apiToken: '', onDelete: deleteNode },
-      conditionBlock: { conditionType: 'contains', condition: '', onDelete: deleteNode },
-      scheduleBlock: { scheduleType: 'interval', cronExpression: '0 9 * * *', interval: 60, onDelete: deleteNode },
+      notionBlock: { 
+        pageTitle: '', 
+        action: 'create_page', 
+        pageId: '', 
+        databaseId: '', 
+        apiToken: '', 
+        onDelete: deleteNode,
+        onChange: (updates) => updateNodeData(nodeIdStr, updates)
+      },
+      routeBlock: {
+        routingMode: 'ai-smart',
+        categories: ['긍정적', '부정적', '중립적'],
+        aiModel: 'claude-3-haiku',
+        confidence: 0.7,
+        keywordRules: '',
+        onDelete: deleteNode,
+        onChange: (updates) => updateNodeData(nodeIdStr, updates)
+      },
+      scheduleBlock: { 
+        scheduleType: 'interval', 
+        cronExpression: '0 9 * * *', 
+        interval: 60,
+        timezone: 'Asia/Seoul',
+        isActive: false,
+        onDelete: deleteNode,
+        onChange: (updates) => updateNodeData(nodeIdStr, updates)
+      },
     };
 
     return {
-      id: `${nodeId}`,
+      id: nodeIdStr,
       type,
       position,
       data: baseData[type] || {},
     };
-  }, [nodeId, deleteNode]);
+  }, [nodeId, deleteNode, updateNodeData]);
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
