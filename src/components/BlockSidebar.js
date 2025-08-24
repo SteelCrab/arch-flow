@@ -14,11 +14,11 @@ const BlockSidebar = ({ onAddBlock, isOpen, onToggle }) => {
     },
     {
       type: 'aiAgentBlock',
-      label: 'AI 에이전트',
+      label: 'AWS Bedrock',
       icon: Bot,
-      color: '#007bff',
+      color: '#FF9900',
       description: 'AI 모델 호출',
-      tooltip: 'OpenAI GPT, Claude, Gemini 등 다양한 AI 모델을 사용하여 텍스트 생성, 요약, 번역, 분석 등의 작업을 수행하는 핵심 블록입니다.'
+      tooltip: 'AWS Bedrock을 통해 Claude 3, Titan, Llama 2 등 다양한 파운데이션 모델을 사용하여 텍스트 생성, 요약, 번역, 분석 등의 작업을 수행하는 핵심 블록입니다.'
     },
     {
       type: 'notionBlock',
