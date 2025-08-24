@@ -25,6 +25,19 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
     }
   };
 
+  // 키보드 이벤트가 상위로 전파되지 않도록 방지
+  const handleKeyDown = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleFocus = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleBlur = (e) => {
+    e.stopPropagation();
+  };
+
   const handleSystemPromptChange = (e) => {
     const value = e.target.value;
     setSystemPrompt(value);
@@ -89,7 +102,13 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
       <div className="block-content">
         <div className="form-group">
           <label>모델 선택</label>
-          <select value={modelId} onChange={handleModelChange}>
+          <select 
+            value={modelId} 
+            onChange={handleModelChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          >
             {modelOptions.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -103,6 +122,9 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
           <textarea
             value={systemPrompt}
             onChange={handleSystemPromptChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder="AI의 역할과 행동을 정의하세요..."
             rows={2}
           />
@@ -113,6 +135,9 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
           <textarea
             value={userPrompt}
             onChange={handleUserPromptChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder="AI에게 전달할 메시지를 입력하세요..."
             rows={3}
           />
@@ -129,6 +154,9 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
                 step="0.1"
                 value={temperature}
                 onChange={handleTemperatureChange}
+                onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
               />
               <small>창의성 조절 (0: 일관성, 1: 창의성)</small>
             </div>
@@ -141,6 +169,9 @@ const AIAgentBlock = ({ data, isConnectable, id }) => {
                 max="4000"
                 value={maxTokens}
                 onChange={handleMaxTokensChange}
+                onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
               />
               <small>응답 길이 제한</small>
             </div>

@@ -81,16 +81,36 @@ const WorkflowCanvasInner = () => {
         return;
       }
 
+      // 뷰포트 좌표를 ReactFlow 좌표로 변환
       const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+        x: event.clientX - reactFlowBounds.left - 100, // 사이드바 너비 고려
+        y: event.clientY - reactFlowBounds.top - 50,   // 헤더 높이 고려
       };
+
+      // 기존 블록들과 겹치지 않도록 위치 조정
+      const existingPositions = nodes.map(node => node.position);
+      let adjustedPosition = { ...position };
+      
+      // 겹치는 블록이 있는지 확인하고 위치 조정
+      let attempts = 0;
+      while (attempts < 10) {
+        const isOverlapping = existingPositions.some(pos => 
+          Math.abs(pos.x - adjustedPosition.x) < 250 && 
+          Math.abs(pos.y - adjustedPosition.y) < 150
+        );
+        
+        if (!isOverlapping) break;
+        
+        adjustedPosition.x += 50;
+        adjustedPosition.y += 50;
+        attempts++;
+      }
 
       const newNodeId = `${type}_${nodeId}`;
       const newNode = {
         id: newNodeId,
         type,
-        position,
+        position: adjustedPosition,
         data: {
           label: `${type} node`,
           onChange: (data) => handleBlockDataChange(newNodeId, data),
@@ -127,7 +147,7 @@ const WorkflowCanvasInner = () => {
       setNodeId((id) => id + 1);
       setHasUnsavedChanges(true);
     },
-    [nodeId, setNodes, handleBlockDataChange, handleDeleteBlock]
+    [nodeId, nodes, setNodes, handleBlockDataChange, handleDeleteBlock]
   );
 
   const onDragOver = useCallback((event) => {
@@ -264,9 +284,21 @@ const WorkflowCanvasInner = () => {
     []
   );
 
-  // 키보드 삭제 기능 비활성화
+  // 키보드 삭제 기능 비활성화 (텍스트 입력 필드는 제외)
   const handleKeyDown = useCallback((event) => {
-    // Delete, Backspace 키 이벤트 차단
+    // 텍스트 입력 요소에서는 키보드 이벤트를 차단하지 않음
+    const target = event.target;
+    if (target && (
+      target.tagName === 'INPUT' || 
+      target.tagName === 'TEXTAREA' || 
+      target.contentEditable === 'true' ||
+      target.closest('input') ||
+      target.closest('textarea')
+    )) {
+      return; // 텍스트 입력 중에는 키보드 이벤트를 차단하지 않음
+    }
+
+    // ReactFlow 캔버스에서만 Delete, Backspace 키 이벤트 차단
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
       event.stopPropagation();
@@ -274,15 +306,12 @@ const WorkflowCanvasInner = () => {
     }
   }, []);
 
-  // 키보드 이벤트 리스너 등록
+  // 키보드 이벤트 리스너 등록 (document 레벨에서)
   useEffect(() => {
-    const canvas = reactFlowWrapper.current;
-    if (canvas) {
-      canvas.addEventListener('keydown', handleKeyDown, true);
-      return () => {
-        canvas.removeEventListener('keydown', handleKeyDown, true);
-      };
-    }
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
   }, [handleKeyDown]);
 
   // 변경사항 추적
@@ -353,13 +382,23 @@ const WorkflowCanvasInner = () => {
             onConnect={onConnect}
             onSelectionChange={onSelectionChange}
             nodeTypes={nodeTypes}
-            fitView
+            fitView={false}
+            fitViewOptions={{
+              padding: 0.2,
+              includeHiddenNodes: false,
+              minZoom: 0.1,
+              maxZoom: 2
+            }}
+            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+            minZoom={0.1}
+            maxZoom={2}
             attributionPosition="top-right"
             deleteKeyCode={null}
             multiSelectionKeyCode={null}
             selectionKeyCode={null}
             onNodesDelete={() => false}
             onEdgesDelete={() => false}
+            proOptions={{ hideAttribution: true }}
           >
             <Controls />
             <MiniMap />

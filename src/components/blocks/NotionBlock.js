@@ -21,6 +21,19 @@ const NotionBlock = ({ data, isConnectable, id }) => {
     }
   };
 
+  // 키보드 이벤트가 상위로 전파되지 않도록 방지
+  const handleKeyDown = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleFocus = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleBlur = (e) => {
+    e.stopPropagation();
+  };
+
   const handleTitleChange = (e) => {
     const value = e.target.value;
     setPageTitle(value);
@@ -58,7 +71,13 @@ const NotionBlock = ({ data, isConnectable, id }) => {
       <div className="block-content">
         <div className="form-group">
           <label>작업 유형</label>
-          <select value={action} onChange={handleActionChange}>
+          <select 
+            value={action} 
+            onChange={handleActionChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          >
             <option value="create_page">페이지 생성</option>
             <option value="add_to_db">DB에 추가</option>
             <option value="update_page">페이지 업데이트</option>
@@ -71,6 +90,9 @@ const NotionBlock = ({ data, isConnectable, id }) => {
             type="text"
             value={pageTitle}
             onChange={handleTitleChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder="페이지 제목을 입력하세요"
           />
         </div>
@@ -81,6 +103,9 @@ const NotionBlock = ({ data, isConnectable, id }) => {
             type="text"
             value={databaseId}
             onChange={handleDatabaseIdChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder="Notion Database ID"
           />
           <small>데이터베이스에 추가할 때만 필요</small>

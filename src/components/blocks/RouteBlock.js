@@ -24,6 +24,19 @@ const RouteBlock = ({ data, isConnectable, id }) => {
     }
   };
 
+  // 키보드 이벤트가 상위로 전파되지 않도록 방지
+  const handleKeyDown = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleFocus = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleBlur = (e) => {
+    e.stopPropagation();
+  };
+
   const handleRoutingModeChange = (e) => {
     const value = e.target.value;
     setRoutingMode(value);
@@ -97,7 +110,13 @@ const RouteBlock = ({ data, isConnectable, id }) => {
       <div className="block-content">
         <div className="form-group">
           <label>라우팅 모드</label>
-          <select value={routingMode} onChange={handleRoutingModeChange}>
+          <select 
+            value={routingMode} 
+            onChange={handleRoutingModeChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          >
             <option value="ai-smart">AI 스마트 분류</option>
             <option value="keyword">키워드 기반</option>
             <option value="manual">수동 분류</option>
@@ -108,7 +127,13 @@ const RouteBlock = ({ data, isConnectable, id }) => {
           <div className="ai-settings">
             <div className="form-group">
               <label>AI 모델</label>
-              <select value={aiModel} onChange={handleAiModelChange}>
+              <select 
+                value={aiModel} 
+                onChange={handleAiModelChange}
+                onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              >
                 {aiModelOptions.map(option => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -126,6 +151,9 @@ const RouteBlock = ({ data, isConnectable, id }) => {
                 step="0.1"
                 value={confidence}
                 onChange={handleConfidenceChange}
+                onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
               />
               <small>분류 확신도 최소값</small>
             </div>
@@ -141,6 +169,9 @@ const RouteBlock = ({ data, isConnectable, id }) => {
                   type="text"
                   value={category}
                   onChange={(e) => handleCategoryChange(index, e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
                   placeholder={`카테고리 ${index + 1}`}
                 />
                 {categories.length > 2 && (
@@ -173,6 +204,9 @@ const RouteBlock = ({ data, isConnectable, id }) => {
             <textarea
               value={keywordRules}
               onChange={handleKeywordRulesChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               placeholder="각 줄에 '키워드 -> 카테고리' 형식으로 입력&#10;예: 좋다 -> 긍정적&#10;나쁘다 -> 부정적"
               rows={3}
             />

@@ -22,6 +22,19 @@ const InputBlock = ({ data, isConnectable, id }) => {
     }
   };
 
+  // 키보드 이벤트가 상위로 전파되지 않도록 방지
+  const handleKeyDown = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleFocus = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleBlur = (e) => {
+    e.stopPropagation();
+  };
+
   return (
     <div className="input-block">
       <button 
@@ -41,6 +54,9 @@ const InputBlock = ({ data, isConnectable, id }) => {
         <textarea
           value={inputValue}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder="텍스트를 입력하세요..."
           rows={3}
         />
