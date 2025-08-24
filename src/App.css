@@ -955,3 +955,80 @@ input[type="text"]:focus {
 .form-group:last-child {
   margin-bottom: 8px;
 }
+/* Route Block 스타일 */
+.route-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.route-name {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+
+.route-condition {
+  flex: 2;
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+
+.remove-route-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-route-btn:hover {
+  background: #c82333;
+}
+
+.add-route-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.add-route-btn:hover {
+  background: #218838;
+}
+
+.route-labels {
+  position: absolute;
+  right: -60px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 60%;
+}
+
+.route-label {
+  position: absolute;
+  font-size: 9px;
+  color: #666;
+  font-weight: bold;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}

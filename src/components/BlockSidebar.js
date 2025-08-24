@@ -52,12 +52,6 @@ const BlockSidebar = ({ onAddBlock, isOpen, onToggle }) => {
       description: '동적 경로 선택',
       tooltip: '입력 데이터의 내용에 따라 동적으로 다음 실행 경로를 선택하는 라우팅 블록입니다.'
     }
-      label: 'Notion',
-      icon: BookOpen,
-      color: '#6c757d',
-      description: 'Notion 저장',
-      tooltip: 'AI로 처리된 결과를 Notion 페이지 생성, 데이터베이스 추가, 또는 기존 페이지 업데이트 방식으로 자동 저장하는 출력 블록입니다.'
-    }
   ];
 
   const handleDragStart = (event, blockType) => {

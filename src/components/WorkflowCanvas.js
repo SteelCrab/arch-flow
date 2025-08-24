@@ -13,13 +13,13 @@ import '@xyflow/react/dist/style.css';
 
 import InputBlock from './blocks/InputBlock';
 import AIAgentBlock from './blocks/AIAgentBlock';
-import ApiService from '../services/api';
 import NotionBlock from './blocks/NotionBlock';
 import ConditionBlock from './blocks/ConditionBlock';
 import ScheduleBlock from './blocks/ScheduleBlock';
+import RouteBlock from './blocks/RouteBlock';
+import ApiService from '../services/api';
 import BlockSidebar from './BlockSidebar';
 import WorkflowSidebar from './WorkflowSidebar';
-import { WorkflowExecutor } from '../utils/workflowExecutor';
 import { ChevronLeft } from 'lucide-react';
 
 const nodeTypes = {
@@ -28,6 +28,7 @@ const nodeTypes = {
   notionBlock: NotionBlock,
   conditionBlock: ConditionBlock,
   scheduleBlock: ScheduleBlock,
+  routeBlock: RouteBlock,
 };
 
 const initialNodes = [];
