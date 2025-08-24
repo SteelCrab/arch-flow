@@ -369,25 +369,9 @@ const WorkflowCanvasInner = () => {
         <div className="sidebar-toggle-header">
           <div className="header-controls">
             <div className="current-workflow-info">
-              {currentWorkflowId && (
-                <div className="workflow-status">
-                  <span className="workflow-indicator">📄</span>
-                  <span className="workflow-text">
-                    워크플로우 편집 중
-                    {hasUnsavedChanges && <span className="unsaved-indicator"> *</span>}
-                  </span>
-                </div>
-              )}
+              {/* 워크플로우 상태는 캔버스로 이동 */}
             </div>
             <div className="header-actions">
-              <button 
-                className="save-btn"
-                onClick={saveWorkflow}
-                disabled={!hasUnsavedChanges}
-                title="Cmd+S로도 저장 가능"
-              >
-                💾 저장
-              </button>
               <button className="sidebar-toggle-btn-top" onClick={() => setSidebarOpen(!sidebarOpen)}>
                 <ChevronLeft size={16} className={!sidebarOpen ? 'rotated' : ''} />
               </button>
@@ -409,6 +393,27 @@ const WorkflowCanvasInner = () => {
         )}
       </div>
       <div className="workflow-main" ref={reactFlowWrapper}>
+        <div className="canvas-header">
+          <div className="canvas-header-left">
+            <button 
+              className="save-btn-canvas"
+              onClick={saveWorkflow}
+              disabled={!hasUnsavedChanges}
+              title="Cmd+S로도 저장 가능"
+            >
+              💾 저장
+              {hasUnsavedChanges && <span className="unsaved-dot">●</span>}
+            </button>
+            {currentWorkflowId && (
+              <div className="workflow-status-canvas">
+                <span className="workflow-text">
+                  워크플로우 편집 중
+                  {hasUnsavedChanges && <span className="unsaved-indicator"> *</span>}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="workflow-controls">
           <button onClick={executeWorkflow} className="execute-btn">
             워크플로우 실행

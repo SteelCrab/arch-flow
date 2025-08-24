@@ -92,6 +92,69 @@
   opacity: 0.6;
 }
 
+/* 캔버스 헤더 스타일 */
+.canvas-header {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.canvas-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.save-btn-canvas {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.save-btn-canvas:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.save-btn-canvas:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.workflow-status-canvas {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  font-size: 13px;
+  color: #333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.unsaved-dot {
+  color: #dc3545;
+  font-size: 12px;
+  margin-left: 4px;
+  animation: pulse 1.5s infinite;
+}
+
 .unsaved-indicator {
   color: #dc3545;
   font-weight: bold;
@@ -134,7 +197,7 @@
 .workflow-controls {
   position: absolute;
   top: 10px;
-  left: 10px;
+  right: 10px;
   z-index: 1000;
   display: flex;
   gap: 10px;
