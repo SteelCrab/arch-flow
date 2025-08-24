@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { File, Save, FolderPlus, Trash2, Edit2, Check, X, Plus, RefreshCw } from 'lucide-react';
+import { File, Save, FolderPlus, Trash2, Edit2, Check, X, Plus, RefreshCw, Clock, Layers } from 'lucide-react';
 import ApiService from '../services/api';
 
 const WorkflowSidebar = ({ 
@@ -163,7 +163,6 @@ const WorkflowSidebar = ({
   const formatDate = (dateString) => {
     try {
       return new Date(dateString).toLocaleDateString('ko-KR', {
-        year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
@@ -175,139 +174,158 @@ const WorkflowSidebar = ({
   };
 
   return (
-    <div className="workflow-sidebar p-4 bg-white border-t border-gray-200">
-      {/* 연결 상태 표시 */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700">워크플로우</h3>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-xs text-gray-500">
-            {backendConnected ? '연결됨' : '오프라인'}
-          </span>
-          <button
-            onClick={loadWorkflows}
-            className="p-1 hover:bg-gray-100 rounded"
-            title="새로고침"
-          >
-            <RefreshCw size={12} />
-          </button>
+    <div className="workflow-sidebar-container">
+      {/* 헤더 */}
+      <div className="workflow-sidebar-header">
+        <div className="sidebar-title">
+          <h3>워크플로우</h3>
+          <div className="connection-status">
+            <div className={`status-dot ${backendConnected ? 'connected' : 'disconnected'}`} />
+            <span className="status-text">
+              {backendConnected ? '연결됨' : '오프라인'}
+            </span>
+          </div>
         </div>
+        <button
+          onClick={loadWorkflows}
+          className="refresh-btn"
+          title="새로고침"
+          disabled={isLoading}
+        >
+          <RefreshCw size={14} className={isLoading ? 'spinning' : ''} />
+        </button>
       </div>
 
       {/* 현재 워크플로우 정보 */}
       {currentWorkflowName && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-blue-800">
-                {currentWorkflowName}
-              </div>
-              <div className="text-xs text-blue-600">
-                현재 워크플로우
-              </div>
+        <div className="current-workflow-card">
+          <div className="current-workflow-info">
+            <div className="workflow-icon">
+              <File size={16} />
             </div>
-            <button
-              onClick={handleSaveCurrent}
-              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-              disabled={!hasUnsavedChanges}
-            >
-              <Save size={12} className="inline mr-1" />
-              저장
-            </button>
+            <div className="workflow-details">
+              <div className="workflow-name">{currentWorkflowName}</div>
+              <div className="workflow-status">현재 작업 중</div>
+            </div>
           </div>
+          <button
+            onClick={handleSaveCurrent}
+            className={`save-btn ${hasUnsavedChanges ? 'has-changes' : ''}`}
+            disabled={!hasUnsavedChanges}
+            title={hasUnsavedChanges ? '변경사항 저장' : '저장할 변경사항 없음'}
+          >
+            <Save size={14} />
+          </button>
         </div>
       )}
 
       {/* 새 워크플로우 생성 */}
-      <div className="mb-4">
-        <div className="flex gap-2">
+      <div className="new-workflow-section">
+        <div className="input-group">
           <input
             type="text"
             value={newWorkflowName}
             onChange={(e) => setNewWorkflowName(e.target.value)}
             placeholder="새 워크플로우 이름"
-            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+            className="workflow-name-input"
             onKeyPress={(e) => e.key === 'Enter' && handleSaveNew()}
           />
           <button
             onClick={handleSaveNew}
-            className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+            className="create-btn"
+            disabled={!newWorkflowName.trim()}
+            title="새 워크플로우 생성"
           >
-            <Plus size={12} />
+            <Plus size={14} />
           </button>
         </div>
       </div>
 
       {/* 워크플로우 목록 */}
-      <div className="workflow-list max-h-64 overflow-y-auto">
-        {isLoading ? (
-          <div className="text-center py-4 text-sm text-gray-500">
-            로딩 중...
-          </div>
-        ) : workflows.length === 0 ? (
-          <div className="text-center py-4 text-sm text-gray-500">
-            저장된 워크플로우가 없습니다.
-          </div>
-        ) : (
-          workflows.map((workflow) => (
-            <div
-              key={workflow.id}
-              className={`workflow-item p-2 mb-2 border rounded cursor-pointer hover:bg-gray-50 ${
-                currentWorkflowId === workflow.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-            >
-              {editingId === workflow.id ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') handleEditWorkflow(workflow.id);
-                      if (e.key === 'Escape') cancelEditing();
-                    }}
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => handleEditWorkflow(workflow.id)}
-                    className="p-1 text-green-600 hover:bg-green-100 rounded"
+      <div className="workflow-list-section">
+        <div className="section-header">
+          <span>저장된 워크플로우</span>
+          <span className="workflow-count">{workflows.length}</span>
+        </div>
+        
+        <div className="workflow-list">
+          {isLoading ? (
+            <div className="loading-state">
+              <div className="loading-spinner" />
+              <span>로딩 중...</span>
+            </div>
+          ) : workflows.length === 0 ? (
+            <div className="empty-state">
+              <File size={24} className="empty-icon" />
+              <span>저장된 워크플로우가 없습니다</span>
+            </div>
+          ) : (
+            workflows.map((workflow) => (
+              <div
+                key={workflow.id}
+                className={`workflow-item ${currentWorkflowId === workflow.id ? 'active' : ''}`}
+              >
+                {editingId === workflow.id ? (
+                  <div className="edit-mode">
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      className="edit-input"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleEditWorkflow(workflow.id);
+                        if (e.key === 'Escape') cancelEditing();
+                      }}
+                      autoFocus
+                    />
+                    <div className="edit-actions">
+                      <button
+                        onClick={() => handleEditWorkflow(workflow.id)}
+                        className="confirm-btn"
+                        title="확인"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="cancel-btn"
+                        title="취소"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="workflow-content"
+                    onClick={() => handleLoadWorkflow(workflow)}
                   >
-                    <Check size={12} />
-                  </button>
-                  <button
-                    onClick={cancelEditing}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ) : (
-                <div onClick={() => handleLoadWorkflow(workflow)}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <File size={14} className="text-gray-500" />
-                      <div>
-                        <div className="text-sm font-medium text-gray-800">
-                          {workflow.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {formatDate(workflow.updatedAt || workflow.createdAt)}
+                    <div className="workflow-main-info">
+                      <div className="workflow-header-info">
+                        <File size={14} className="file-icon" />
+                        <span className="workflow-title">{workflow.name}</span>
+                      </div>
+                      <div className="workflow-meta">
+                        <div className="meta-item">
+                          <Clock size={10} />
+                          <span>{formatDate(workflow.updatedAt || workflow.createdAt)}</span>
                         </div>
                         {workflow.nodes && (
-                          <div className="text-xs text-gray-400">
-                            {workflow.nodes.length}개 블록
+                          <div className="meta-item">
+                            <Layers size={10} />
+                            <span>{workflow.nodes.length}개 블록</span>
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="workflow-actions">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           startEditing(workflow);
                         }}
-                        className="p-1 text-gray-500 hover:bg-gray-200 rounded"
+                        className="action-btn edit-btn"
+                        title="이름 변경"
                       >
                         <Edit2 size={12} />
                       </button>
@@ -316,27 +334,29 @@ const WorkflowSidebar = ({
                           e.stopPropagation();
                           handleDeleteWorkflow(workflow.id, workflow.name);
                         }}
-                        className="p-1 text-red-500 hover:bg-red-100 rounded"
+                        className="action-btn delete-btn"
+                        title="삭제"
                       >
                         <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* 새 워크플로우 버튼 */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
+      <div className="sidebar-footer">
         <button
           onClick={onNew}
-          className="w-full px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 flex items-center justify-center gap-2"
+          className="new-workflow-btn"
+          title="새 워크플로우"
         >
-          <FolderPlus size={14} />
-          새 워크플로우
+          <FolderPlus size={16} />
+          <span>새 워크플로우</span>
         </button>
       </div>
     </div>
