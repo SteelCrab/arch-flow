@@ -80,15 +80,21 @@ const WorkflowSidebar = ({
   };
 
   const handleLoadWorkflow = async (workflow) => {
+    console.log('Loading workflow clicked:', workflow);
+    
     if (hasUnsavedChanges) {
       const confirmed = window.confirm('저장되지 않은 변경사항이 있습니다. 다른 워크플로우를 불러오시겠습니까?');
       if (!confirmed) return;
     }
 
     try {
-      console.log('Loading workflow from sidebar:', workflow);
+      console.log('Calling onLoad with workflow ID:', workflow.id);
       if (onLoad) {
         await onLoad(workflow.id);
+        console.log('Workflow loaded successfully');
+      } else {
+        console.error('onLoad function is not provided');
+        alert('워크플로우 로드 기능이 연결되지 않았습니다.');
       }
     } catch (error) {
       console.error('워크플로우 로드 실패:', error);

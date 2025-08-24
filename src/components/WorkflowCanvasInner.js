@@ -81,9 +81,9 @@ const WorkflowCanvasInner = () => {
         return;
       }
 
-      // 뷰포트 좌표를 ReactFlow 좌표로 변환
+      // 뷰포트 좌표를 ReactFlow 좌표로 변환 (우측 사이드바 고려)
       const position = {
-        x: event.clientX - reactFlowBounds.left - 100, // 사이드바 너비 고려
+        x: event.clientX - reactFlowBounds.left - (sidebarOpen ? 100 : 50), // 좌측 사이드바 너비 고려
         y: event.clientY - reactFlowBounds.top - 50,   // 헤더 높이 고려
       };
 
@@ -212,13 +212,22 @@ const WorkflowCanvasInner = () => {
 
   // 워크플로우 로드 함수 (블록 데이터 복원)
   const loadWorkflow = useCallback(async (workflowId) => {
+    console.log('loadWorkflow called with ID:', workflowId);
+    
     try {
-      console.log('Loading workflow:', workflowId);
       const workflow = await ApiService.getWorkflow(workflowId);
+      console.log('Retrieved workflow data:', workflow);
       
-      if (workflow && workflow.nodes && workflow.edges) {
+      if (workflow) {
+        // 노드와 엣지가 있는지 확인
+        const workflowNodes = workflow.nodes || [];
+        const workflowEdges = workflow.edges || [];
+        
+        console.log('Workflow nodes:', workflowNodes);
+        console.log('Workflow edges:', workflowEdges);
+        
         // 로드된 노드에 이벤트 핸들러 다시 연결
-        const restoredNodes = workflow.nodes.map(node => ({
+        const restoredNodes = workflowNodes.map(node => ({
           ...node,
           data: {
             ...node.data,
@@ -227,25 +236,32 @@ const WorkflowCanvasInner = () => {
           }
         }));
 
-        console.log('Restored nodes:', restoredNodes);
+        console.log('Restored nodes with handlers:', restoredNodes);
+        
         setNodes(restoredNodes);
-        setEdges(workflow.edges);
+        setEdges(workflowEdges);
         setCurrentWorkflowId(workflow.id);
         setCurrentWorkflowName(workflow.name);
         setHasUnsavedChanges(false);
         
         // 다음 노드 ID 설정
-        const maxId = Math.max(
-          ...workflow.nodes.map(node => {
-            const match = node.id.match(/_(\d+)$/);
-            return match ? parseInt(match[1]) : 0;
-          }),
-          0
-        );
-        setNodeId(maxId + 1);
+        if (workflowNodes.length > 0) {
+          const maxId = Math.max(
+            ...workflowNodes.map(node => {
+              const match = node.id.match(/_(\d+)$/);
+              return match ? parseInt(match[1]) : 0;
+            }),
+            0
+          );
+          setNodeId(maxId + 1);
+        } else {
+          setNodeId(1);
+        }
         
+        console.log('Workflow loaded successfully:', workflow.name);
         alert(`워크플로우 "${workflow.name}"를 불러왔습니다.`);
       } else {
+        console.error('No workflow data received');
         alert('워크플로우 데이터를 찾을 수 없습니다.');
       }
     } catch (error) {
@@ -323,12 +339,9 @@ const WorkflowCanvasInner = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+      {/* Left Sidebar - WorkflowSidebar */}
       <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 overflow-hidden bg-white border-r border-gray-200 flex flex-col`}>
         <div className="flex-1 overflow-hidden">
-          <BlockSidebar />
-        </div>
-        <div className="border-t border-gray-200">
           <WorkflowSidebar 
             onSave={saveWorkflow}
             onLoad={loadWorkflow}
@@ -416,6 +429,13 @@ const WorkflowCanvasInner = () => {
             />
           </div>
         )}
+      </div>
+
+      {/* Right Sidebar - BlockSidebar */}
+      <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+        <div className="flex-1 overflow-hidden">
+          <BlockSidebar />
+        </div>
       </div>
     </div>
   );
