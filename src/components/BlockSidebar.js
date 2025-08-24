@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Bot, BookOpen, Split, Clock } from 'lucide-react';
 
-const BlockSidebar = ({ onAddBlock, isOpen, onToggle }) => {
+const BlockSidebar = ({ onAddBlock, isOpen, onToggle, executionResults = [], isExecuting = false }) => {
   const [tooltip, setTooltip] = useState({ show: false, text: '', x: 0, y: 0 });
   const blockTypes = [
     {
@@ -89,6 +89,35 @@ const BlockSidebar = ({ onAddBlock, isOpen, onToggle }) => {
           );
         })}
       </div>
+      
+      {/* 실행 결과 영역 */}
+      <div className="execution-results-section">
+        <div className="section-header">
+          <h4>실행 결과</h4>
+          {isExecuting && <div className="loading-spinner">⚡</div>}
+        </div>
+        
+        <div className="results-container">
+          {executionResults.length === 0 && !isExecuting ? (
+            <div className="no-results">
+              <span>워크플로우를 실행하면 결과가 여기에 표시됩니다.</span>
+            </div>
+          ) : (
+            executionResults.map((result, index) => (
+              <div key={result.id || index} className={`result-item ${result.success ? 'success' : 'error'}`}>
+                <div className="result-header">
+                  <span className="result-title">{result.title}</span>
+                  <span className="result-time">{result.timestamp}</span>
+                </div>
+                <div className="result-content">
+                  {result.content}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      
       {tooltip.show && (
         <div 
           className="tooltip-overlay"

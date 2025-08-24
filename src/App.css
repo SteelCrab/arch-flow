@@ -1107,6 +1107,94 @@
   margin-top: 2px;
 }
 
+/* 실행 결과 영역 */
+.execution-results-section {
+  margin-top: 20px;
+  padding: 15px;
+  border-top: 1px solid #dee2e6;
+  background: #f8f9fa;
+}
+
+.execution-results-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.execution-results-section h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.results-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.no-results {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.result-item {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  background: white;
+  font-size: 12px;
+}
+
+.result-item.success {
+  border-left-color: #28a745;
+  background: #f8fff9;
+}
+
+.result-item.error {
+  border-left-color: #dc3545;
+  background: #fff8f8;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.result-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.result-time {
+  font-size: 10px;
+  color: #666;
+}
+
+.result-content {
+  color: #555;
+  line-height: 1.4;
+  word-break: break-word;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
 .temperature-control {
   display: flex;
   flex-direction: column;

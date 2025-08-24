@@ -115,6 +115,7 @@ class WorkflowExecutor {
   // Input Block 실행
   async executeInputBlock(node, inputData) {
     const content = node.data?.content || '';
+    console.log(`📝 Input Block (${node.id}): "${content}"`);
     return {
       success: true,
       type: 'input',
@@ -123,9 +124,9 @@ class WorkflowExecutor {
     };
   }
 
-  // AI Agent Block 실행 (AWS Bedrock)
+  // AI Agent Block 실행
   async executeAIAgentBlock(node, inputData) {
-    const { systemPrompt, userPrompt, modelId, temperature, maxTokens, topP, region } = node.data || {};
+    const { systemPrompt, userPrompt, modelId, temperature, maxTokens } = node.data || {};
     
     // 입력 데이터를 프롬프트에 포함
     let finalUserPrompt = userPrompt || '';
@@ -135,27 +136,40 @@ class WorkflowExecutor {
       }
     });
     
-    // AWS Bedrock API 호출
-    const bedrockResponse = await this.callBedrockService(
-      modelId, 
-      systemPrompt, 
-      finalUserPrompt, 
-      temperature, 
-      maxTokens, 
-      topP, 
-      region
-    );
+    console.log(`🤖 AI Agent Block (${node.id}): ${modelId}`);
+    console.log(`💬 프롬프트: ${finalUserPrompt.substring(0, 100)}...`);
+    
+    // Mock AI 응답 생성
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+    
+    const mockResponse = `AI 모델 ${modelId}의 응답:
+
+시스템 컨텍스트: ${systemPrompt || '기본 AI 어시스턴트'}
+
+사용자 요청에 대한 분석:
+"${finalUserPrompt}"
+
+이 요청에 대해 다음과 같이 답변드립니다:
+
+1. 입력된 내용을 분석한 결과, 주요 키워드와 의도를 파악했습니다.
+2. 요청에 따라 적절한 응답을 생성했습니다.
+3. 추가적인 제안이나 개선사항이 있다면 알려드립니다.
+
+모델 설정:
+- Temperature: ${temperature || 0.7}
+- Max Tokens: ${maxTokens || 1000}
+- 시간: ${new Date().toLocaleString()}
+
+이 응답은 Mock 데이터입니다. 실제 환경에서는 AWS Bedrock API를 통해 실제 AI 모델의 응답을 받게 됩니다.`;
     
     return {
       success: true,
       type: 'ai',
-      provider: 'aws-bedrock',
-      modelId: modelId,
-      region: region,
+      modelId: modelId || 'mock-model',
       prompt: finalUserPrompt,
-      response: bedrockResponse.response,
-      inputTokens: bedrockResponse.inputTokens,
-      outputTokens: bedrockResponse.outputTokens,
+      response: mockResponse,
+      inputTokens: Math.ceil(finalUserPrompt.length / 4),
+      outputTokens: Math.ceil(mockResponse.length / 4),
       timestamp: new Date().toISOString()
     };
   }
