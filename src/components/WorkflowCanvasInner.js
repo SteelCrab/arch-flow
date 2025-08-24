@@ -264,6 +264,27 @@ const WorkflowCanvasInner = () => {
     []
   );
 
+  // 키보드 삭제 기능 비활성화
+  const handleKeyDown = useCallback((event) => {
+    // Delete, Backspace 키 이벤트 차단
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      event.stopPropagation();
+      return false;
+    }
+  }, []);
+
+  // 키보드 이벤트 리스너 등록
+  useEffect(() => {
+    const canvas = reactFlowWrapper.current;
+    if (canvas) {
+      canvas.addEventListener('keydown', handleKeyDown, true);
+      return () => {
+        canvas.removeEventListener('keydown', handleKeyDown, true);
+      };
+    }
+  }, [handleKeyDown]);
+
   // 변경사항 추적
   useEffect(() => {
     if (currentWorkflowId && (nodes.length > 0 || edges.length > 0)) {
@@ -334,6 +355,11 @@ const WorkflowCanvasInner = () => {
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="top-right"
+            deleteKeyCode={null}
+            multiSelectionKeyCode={null}
+            selectionKeyCode={null}
+            onNodesDelete={() => false}
+            onEdgesDelete={() => false}
           >
             <Controls />
             <MiniMap />
