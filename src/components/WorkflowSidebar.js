@@ -45,9 +45,10 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
     }
 
     const newWorkflow = {
-      id: `workflow_${Date.now()}`,
+      id: `wf_${Date.now()}`,
       name: newWorkflowName.trim(),
-      type: 'file',
+      nodes: [],
+      edges: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -62,6 +63,7 @@ const WorkflowSidebar = ({ onSaveWorkflow, onLoadWorkflow }) => {
       
       setNewWorkflowName('');
       await loadWorkflows(); // 목록 새로고침
+      alert(`"${newWorkflow.name}" 워크플로우가 생성되었습니다!`);
     } catch (error) {
       console.error('워크플로우 저장 실패:', error);
       alert('워크플로우 저장에 실패했습니다.');

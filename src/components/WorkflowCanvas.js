@@ -42,6 +42,7 @@ const WorkflowCanvasInner = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [currentWorkflowId, setCurrentWorkflowId] = useState(null);
+  const [currentWorkflowName, setCurrentWorkflowName] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // 수동 저장 함수
@@ -51,14 +52,13 @@ const WorkflowCanvasInner = () => {
       return;
     }
 
-    const workflowId = currentWorkflowId || `workflow_${Date.now()}`;
+    const workflowId = currentWorkflowId || `wf_${Date.now()}`;
     
     // 기존 워크플로우 정보 가져오기
-    let existingName = null;
+    let existingWorkflow = null;
     if (currentWorkflowId) {
       try {
-        const existing = await ApiService.getWorkflow(currentWorkflowId);
-        existingName = existing?.name;
+        existingWorkflow = await ApiService.getWorkflow(currentWorkflowId);
       } catch (error) {
         console.warn('기존 워크플로우 정보 조회 실패:', error);
       }
@@ -66,28 +66,32 @@ const WorkflowCanvasInner = () => {
     
     const workflowData = {
       id: workflowId,
-      name: existingName || (currentWorkflowId ? `워크플로우 ${workflowId}` : `새 워크플로우 ${new Date().toLocaleTimeString()}`),
+      name: existingWorkflow?.name || `워크플로우 ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString().slice(0, 5)}`,
       nodes,
       edges,
       updatedAt: new Date().toISOString()
     };
 
     try {
-      if (currentWorkflowId) {
+      if (currentWorkflowId && existingWorkflow) {
         // 기존 워크플로우 업데이트 (이름 유지)
-        await ApiService.updateWorkflow(workflowId, {
+        const updateData = {
+          ...existingWorkflow,
           nodes,
           edges,
           updatedAt: workflowData.updatedAt
-        });
+        };
+        await ApiService.updateWorkflow(workflowId, updateData);
+        console.log('워크플로우 업데이트 완료:', existingWorkflow.name);
       } else {
         // 새 워크플로우 저장
         await ApiService.saveWorkflow(workflowData);
         setCurrentWorkflowId(workflowId);
+        setCurrentWorkflowName(workflowData.name);
+        console.log('새 워크플로우 저장 완료:', workflowData.name);
       }
       
       setHasUnsavedChanges(false);
-      console.log('워크플로우 저장 완료:', workflowData.name);
       alert('워크플로우가 저장되었습니다!');
     } catch (error) {
       console.error('워크플로우 저장 실패:', error);
@@ -99,7 +103,6 @@ const WorkflowCanvasInner = () => {
         const existingIndex = savedWorkflows.findIndex(w => w.id === workflowId);
         
         if (existingIndex >= 0) {
-          // 기존 워크플로우는 이름 유지
           savedWorkflows[existingIndex] = {
             ...savedWorkflows[existingIndex],
             updatedAt: workflowData.updatedAt
@@ -118,6 +121,7 @@ const WorkflowCanvasInner = () => {
         
         if (!currentWorkflowId) {
           setCurrentWorkflowId(workflowId);
+          setCurrentWorkflowName(workflowData.name);
         }
         
         setHasUnsavedChanges(false);
@@ -194,6 +198,7 @@ const WorkflowCanvasInner = () => {
     try {
       await ApiService.saveWorkflow(workflowData);
       setCurrentWorkflowId(workflow.id);
+      setCurrentWorkflowName(workflowData.name);
       setHasUnsavedChanges(false);
       console.log('새 워크플로우 저장 완료:', workflowData.name);
     } catch (error) {
@@ -225,10 +230,28 @@ const WorkflowCanvasInner = () => {
         setNodes(savedNodes || []);
         setEdges(savedEdges || []);
         setCurrentWorkflowId(workflow.id);
+        setCurrentWorkflowName(workflowData.name);
         setHasUnsavedChanges(false);
+        console.log(`워크플로우 "${workflowData.name}" 불러오기 완료`);
       }
     } catch (error) {
       console.error('워크플로우 불러오기 실패:', error);
+      // 로컬 스토리지에서 시도
+      try {
+        const localData = localStorage.getItem(`workflow_${workflow.id}`);
+        if (localData) {
+          const workflowData = JSON.parse(localData);
+          setNodes(workflowData.nodes || []);
+          setEdges(workflowData.edges || []);
+          setCurrentWorkflowId(workflow.id);
+          setCurrentWorkflowName(workflowData.name);
+          setHasUnsavedChanges(false);
+          console.log(`로컬에서 워크플로우 "${workflowData.name}" 불러오기 완료`);
+        }
+      } catch (localError) {
+        console.error('로컬 워크플로우 불러오기 실패:', localError);
+        alert('워크플로우를 불러올 수 없습니다.');
+      }
     }
   };
 
@@ -407,7 +430,7 @@ const WorkflowCanvasInner = () => {
             {currentWorkflowId && (
               <div className="workflow-status-canvas">
                 <span className="workflow-text">
-                  워크플로우 편집 중
+                  {currentWorkflowName || '워크플로우 편집 중'}
                   {hasUnsavedChanges && <span className="unsaved-indicator"> *</span>}
                 </span>
               </div>
